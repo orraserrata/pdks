@@ -1,44 +1,40 @@
-import React, { useEffect, useState } from 'react'
-import { supabase } from './supabaseClient'
+import React, { useEffect, useState } from 'react';
+import { supabase } from './supabaseClient';
 import PersonelListesi from './PersonelListesi';
+import PersonelGirisCikisListesi from './components/PersonelGirisCikisListesi';
 
 function App() {
-  const [personeller, setPersoneller] = useState([])
-return (
-    <div className="App">
-      <PersonelListesi />
-    </div>
-  );
+  const [personeller, setPersoneller] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    fetchPersoneller()
-  }, [])
+    async function fetchPersoneller() {
+      const { data, error } = await supabase
+        .from('personel')
+        .select('*')
+        .order('isim', { ascending: true });
 
-  const fetchPersoneller = async () => {
-    const { data, error } = await supabase
-      .from('personel')
-      .select('*')
-      .order('isim', { ascending: true })
-
-    if (error) {
-      console.error('Hata:', error)
-    } else {
-      setPersoneller(data)
+      if (error) {
+        console.error('Veri çekme hatası:', error);
+        setPersoneller([]);
+      } else {
+        setPersoneller(data || []);
+      }
+      setLoading(false);
     }
-  }
+
+    fetchPersoneller();
+  }, []);
+
+  if (loading) return <div>Yükleniyor...</div>;
 
   return (
-    <div>
-      <h1>Personel Listesi</h1>
-      <ul>
-        {personeller.map((p) => (
-          <li key={p.id}>
-            {p.isim} {p.soyisim}
-          </li>
-        ))}
-      </ul>
+    <div className="App">
+      <h1>PDKS Uygulaması</h1>
+      <PersonelListesi personeller={personeller} />
+      <PersonelGirisCikisListesi />
     </div>
-  )
+  );
 }
 
-
-export default App
+export default App;
