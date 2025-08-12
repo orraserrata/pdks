@@ -4,7 +4,11 @@ import PersonelListesi from './PersonelListesi';
 
 function App() {
   const [personeller, setPersoneller] = useState([])
-
+return (
+    <div className="App">
+      <PersonelListesi />
+    </div>
+  );
   useEffect(() => {
     fetchPersoneller()
   }, [])
@@ -35,12 +39,6 @@ function App() {
     </div>
   )
 }
-function App() {
-  return (
-    <div className="App">
-      <PersonelListesi />
-    </div>
-  );
-}
+
 
 export default App
