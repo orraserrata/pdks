@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import PersonelListesi from './PersonelListesi';
 
 function App() {
   const [personeller, setPersoneller] = useState([])
@@ -33,6 +34,13 @@ function App() {
       </ul>
     </div>
   )
+}
+function App() {
+  return (
+    <div className="App">
+      <PersonelListesi />
+    </div>
+  );
 }
 
 export default App
