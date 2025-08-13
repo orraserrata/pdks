@@ -12,7 +12,7 @@ function App() {
     async function fetchPersoneller() {
       const { data, error } = await supabase
         .from('personel_giris_cikis_duzenli')
-        .select('kullanici_id')
+        .select('*')
         .order('kullanici_id', { ascending: true });
 		
 

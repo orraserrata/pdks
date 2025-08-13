@@ -1,3 +1,5 @@
+// components/CalisanDetay.js
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { format, eachDayOfInterval, addDays, startOfWeek, endOfWeek } from "date-fns";
