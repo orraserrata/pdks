@@ -11,7 +11,7 @@ function App() {
   useEffect(() => {
     async function fetchPersoneller() {
       const { data, error } = await supabase
-        .from('personel')
+        .from('personel_giris_cikis_duzenli')
         .select('*')
         .order('isim', { ascending: true });
 
