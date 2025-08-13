@@ -101,7 +101,7 @@ def main():
                 "timestamp": a.timestamp
             })
 
-        save_to_supabase(attendance)
+        save_to_supabase(attendance_records)
         conn.disconnect()
 
         # Ham veriyi alıp düzenle

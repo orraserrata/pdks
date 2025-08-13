@@ -1,8 +1,7 @@
 // components/CalisanListesi.js
 import React from "react";
-import { supabase } from "../supabaseClient";
 
-export default function CalisanListesi({ personeller, setSeciliCalisan }) {
+export default function CalisanListesi({ personeller, onCalisanSelect }) {
   return (
     <div>
       <h2>Çalışan Listesi</h2>
@@ -11,7 +10,7 @@ export default function CalisanListesi({ personeller, setSeciliCalisan }) {
           <li
             key={p.kullanici_id}
             style={{ cursor: "pointer", margin: "5px 0" }}
-            onClick={() => setSeciliCalisan(p)}
+            onClick={() => onCalisanSelect(p)}
           >
             {p.isim || `ID: ${p.kullanici_id}`} {p.soyisim || ""}
           </li>
