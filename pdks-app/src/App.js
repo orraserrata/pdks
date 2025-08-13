@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
-import PersonelListesi from './PersonelListesi';
-import PersonelGirisCikisListesi from './components/PersonelGirisCikisListesi';
 import CalisanListesi from "./components/CalisanListesi";
 import CalisanDetay from "./components/CalisanDetay";
 
@@ -35,21 +33,16 @@ function App() {
     <div className="App">
       <h1>PDKS Uygulaması</h1>
 
-      <div style={{ display: 'flex', gap: '50px' }}>
+      <div style={{ display: 'flex', gap: '50px', alignItems: 'flex-start' }}>
         {/* Çalışan listesi */}
         <CalisanListesi
-        personeller={personeller}
-        onCalisanSelect={(calisan) => setSeciliCalisan(calisan)}
-      />
+          personeller={personeller}
+          onCalisanSelect={(calisan) => setSeciliCalisan(calisan)}
+        />
 
         {/* Seçilen çalışanın detayları */}
-        <CalisanListesi personeller={personeller} setSeciliCalisan={setSeciliCalisan} />
-{seciliCalisan && <CalisanDetay calisan={seciliCalisan} />}
+        {seciliCalisan && <CalisanDetay calisan={seciliCalisan} />}
       </div>
-
-      {/* Eski personel listesi ve giriş-çıkış tablosu hala kullanılacaksa */}
-      {/* <PersonelListesi personeller={personeller} />
-      <PersonelGirisCikisListesi /> */}
     </div>
   );
 }
