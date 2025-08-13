@@ -18,30 +18,16 @@ function App() {
 
   useEffect(() => {
     async function fetchPersoneller() {
-      // Önce görünümden dene; yoksa eski tabloya düş
-      let resp = await supabase
-        .from('personel_duzenli_with_names')
-        .select('*')
+      const { data, error } = await supabase
+        .from('personel')
+        .select('kullanici_id, isim, soyisim, ise_giris_tarihi')
         .order('kullanici_id', { ascending: true });
 
-      if (resp.error) {
-        resp = await supabase
-          .from('personel_giris_cikis_duzenli')
-          .select('*')
-          .order('kullanici_id', { ascending: true });
-      }
-
-      if (resp.error) {
-        console.error('Veri çekme hatası:', resp.error);
+      if (error) {
+        console.error('Veri çekme hatası:', error);
         setPersoneller([]);
       } else {
-        const uniqueByUser = new Map();
-        (resp.data || []).forEach((row) => {
-          if (!uniqueByUser.has(row.kullanici_id)) {
-            uniqueByUser.set(row.kullanici_id, row);
-          }
-        });
-        setPersoneller(Array.from(uniqueByUser.values()));
+        setPersoneller(data || []);
       }
       setLoading(false);
     }

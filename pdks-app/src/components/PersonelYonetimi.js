@@ -186,7 +186,7 @@ function PersonelList({ onDelete }) {
           <th>Kullanıcı ID</th>
           <th>İsim</th>
           <th>Soyisim</th>
-          <th>İşe Giriş</th>
+          <th>İşe Giriş Tarihi</th>
           <th>İşlem</th>
         </tr>
       </thead>
@@ -218,17 +218,17 @@ function PersonelList({ onDelete }) {
                   p.soyisim
                 )}
               </td>
-              <td>
-                {isEditing ? (
-                  <input
-                    type="date"
-                    value={editForm.ise_giris_tarihi}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, ise_giris_tarihi: e.target.value }))}
-                  />
-                ) : (
-                  p.ise_giris_tarihi
-                )}
-              </td>
+            <td>
+              {isEditing ? (
+                <input
+                  type="date"
+                  value={editForm.ise_giris_tarihi}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, ise_giris_tarihi: e.target.value }))}
+                />
+              ) : (
+                p.ise_giris_tarihi
+              )}
+            </td>
               <td style={{ display: "flex", gap: 6 }}>
                 {isEditing ? (
                   <>

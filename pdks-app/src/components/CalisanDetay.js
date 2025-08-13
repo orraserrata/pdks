@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
-import { format, eachDayOfInterval } from "date-fns";
+import { format, eachDayOfInterval, addDays } from "date-fns";
+import { tr as trLocale } from "date-fns/locale";
 import Modal from "./Modal";
 
 function CalisanDetay({ calisan }) {
@@ -11,8 +12,10 @@ function CalisanDetay({ calisan }) {
   const [bitis, setBitis] = useState(format(new Date(), "yyyy-MM-dd"));
   const [session, setSession] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
-  const [editing, setEditing] = useState(null); // { id, giris_tarihi, cikis_tarihi }
+  const [editing, setEditing] = useState(null); // { id?, giris_tarihi?, cikis_tarihi?, isNew? }
   const [editValues, setEditValues] = useState({ giris: "", cikis: "" });
+  const [lockChecked, setLockChecked] = useState(false);
+  const dayStartHour = 5; // iş günü başlangıcı
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -23,12 +26,13 @@ function CalisanDetay({ calisan }) {
   useEffect(() => {
     async function fetchGirisCikis() {
       if (!calisan) return;
+      const endExclusive = format(addDays(new Date(bitis), 1), "yyyy-MM-dd");
       const { data, error } = await supabase
         .from("personel_giris_cikis_duzenli")
         .select("*")
         .eq("kullanici_id", calisan.kullanici_id ?? calisan.id)
         .gte("giris_tarihi", baslangic)
-        .lte("giris_tarihi", bitis)
+        .lt("giris_tarihi", endExclusive)
         .order("giris_tarihi", { ascending: true });
 
       if (error) {
@@ -46,29 +50,35 @@ function CalisanDetay({ calisan }) {
     end: new Date(bitis),
   });
 
-  // Günlük kayıtları ve süreyi hesapla
+  // Kayıtları iş günü kaydırmalı gösterime göre grupla
+  const recordsForDisplay = girisCikis.map((k) => {
+    const girisDt = new Date(k.giris_tarihi);
+    const cikisDt = k.cikis_tarihi ? new Date(k.cikis_tarihi) : null;
+    const sure = cikisDt ? (cikisDt - girisDt) / (1000 * 60 * 60) : 0;
+    const displayDate = k.workday_date
+      ? k.workday_date
+      : format(new Date(girisDt.getTime() - dayStartHour * 60 * 60 * 1000), "yyyy-MM-dd");
+    return { ...k, girisDt, cikisDt, displayDate, sure };
+  });
+
+  // Günlük satırları üret (bir günde birden çok aralık olabilir)
   const gunlerWithData = gunler
     .map((gun) => {
       const dateStr = format(gun, "yyyy-MM-dd");
-      const kayitlar = girisCikis.filter((g) =>
-        g.giris_tarihi.startsWith(dateStr)
-      );
-
-      if (kayitlar.length === 0) {
-        return [{ tarih: dateStr, giris: "-", cikis: "Devamsız", sure: 0 }];
+      const recs = recordsForDisplay
+        .filter((r) => r.displayDate === dateStr)
+        .sort((a, b) => a.girisDt - b.girisDt);
+      if (recs.length === 0) {
+        return [{ tarih: dateStr, gun: format(new Date(dateStr), "EEEE", { locale: trLocale }), giris: "-", cikis: "Devamsız", sure: 0, _row: null }];
       }
-
-      return kayitlar.map((k) => {
-        const giris = new Date(k.giris_tarihi);
-        const cikis = k.cikis_tarihi ? new Date(k.cikis_tarihi) : null;
-        const sure = cikis ? (cikis - giris) / (1000 * 60 * 60) : 0; // saat cinsinden
-        return {
-          tarih: dateStr,
-          giris: format(giris, "HH:mm"),
-          cikis: cikis ? format(cikis, "HH:mm") : "-",
-          sure,
-        };
-      });
+      return recs.map((r) => ({
+        tarih: dateStr,
+        gun: format(new Date(dateStr), "EEEE", { locale: trLocale }),
+        giris: format(r.girisDt, "HH:mm"),
+        cikis: r.cikisDt ? format(r.cikisDt, "HH:mm") : "-",
+        sure: r.sure,
+        _row: r,
+      }));
     })
     .flat();
 
@@ -98,6 +108,7 @@ function CalisanDetay({ calisan }) {
         <thead>
           <tr>
             <th>Tarih</th>
+            <th>Gün</th>
             <th>Giriş</th>
             <th>Çıkış</th>
             <th>Süre (saat)</th>
@@ -106,18 +117,21 @@ function CalisanDetay({ calisan }) {
         </thead>
         <tbody>
           {gunlerWithData.map((g, i) => {
-            const row = girisCikis.find((r) => r.giris_tarihi.startsWith(g.tarih));
+            const row = g._row || null;
             return (
               <tr key={i}>
                 <td>{g.tarih}</td>
-                <td>{g.giris}</td>
-                <td>{g.cikis}</td>
+                <td>{g.gun}</td>
+                <td>{row ? g.giris : '-'}</td>
+                <td>{row ? g.cikis : 'Devamsız'}</td>
                 <td>{g.sure.toFixed(2)}</td>
                 {session && (
                   <td>
-                    {row && (
-                      <button onClick={() => {
+                    {row ? (
+                      <>
+                        <button onClick={() => {
                         setEditing(row);
+                        setLockChecked(row.admin_locked !== false);
                         const toLocal = (v) => {
                           if (!v) return "";
                           const d = new Date(v);
@@ -132,7 +146,34 @@ function CalisanDetay({ calisan }) {
                           giris: toLocal(row.giris_tarihi),
                           cikis: toLocal(row.cikis_tarihi),
                         });
-                      }}>Düzenle</button>
+                        }}>Düzenle</button>
+                        <button style={{ marginLeft: 6 }} onClick={async () => {
+                          if (!window.confirm('Bu kaydı silmek istiyor musunuz?')) return;
+                          const { error } = await supabase
+                            .from('personel_giris_cikis_duzenli')
+                            .delete()
+                            .eq('id', row.id);
+                          if (!error) {
+                            const { data } = await supabase
+                              .from('personel_giris_cikis_duzenli')
+                              .select('*')
+                              .eq('kullanici_id', calisan.kullanici_id ?? calisan.id)
+                              .gte('giris_tarihi', baslangic)
+                              .lte('giris_tarihi', bitis)
+                              .order('giris_tarihi', { ascending: true });
+                            setGirisCikis(data || []);
+                          } else {
+                            alert(error.message || 'Silme başarısız');
+                          }
+                        }}>Sil</button>
+                      </>
+                    ) : (
+                      <button onClick={() => {
+                        // Devamsız gün için yeni kayıt ekle
+                        setEditing({ isNew: true, kullanici_id: calisan.kullanici_id ?? calisan.id, displayDate: g.tarih });
+                        setLockChecked(false);
+                        setEditValues({ giris: `${g.tarih}T08:00`, cikis: `${g.tarih}T17:00` });
+                      }}>Ekle</button>
                     )}
                   </td>
                 )}
@@ -173,15 +214,46 @@ function CalisanDetay({ calisan }) {
               style={{ marginLeft: 6 }}
             />
           </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input type="checkbox" checked={lockChecked} onChange={(e) => setLockChecked(e.target.checked)} />
+            Günü kilitle (cihaz verisi üzerine yazmasın)
+          </label>
           <button
             onClick={async () => {
               // admin kontrolü RLS tarafından sağlanacak; burada sadece update deniyoruz
               const toIso = (s) => (s ? s.replace('T', ' ') + ':00' : null);
+              const toWorkday = (s) => {
+                if (!s) return null;
+                const d = new Date(s);
+                const shifted = new Date(d.getTime() - dayStartHour * 60 * 60 * 1000);
+                return format(shifted, "yyyy-MM-dd");
+              };
               if (!editing) return;
-              const { error } = await supabase
-                .from('personel_giris_cikis_duzenli')
-                .update({ giris_tarihi: toIso(editValues.giris), cikis_tarihi: toIso(editValues.cikis) })
-                .eq('id', editing.id);
+              let error;
+              if (editing.isNew) {
+                const insertPayload = {
+                  kullanici_id: editing.kullanici_id,
+                  giris_tarihi: toIso(editValues.giris),
+                  cikis_tarihi: toIso(editValues.cikis),
+                  admin_locked: lockChecked,
+                  workday_date: toWorkday(editValues.giris) || null,
+                };
+                const resp = await supabase
+                  .from('personel_giris_cikis_duzenli')
+                  .insert(insertPayload);
+                error = resp.error;
+              } else {
+                const resp = await supabase
+                  .from('personel_giris_cikis_duzenli')
+                  .update({
+                    giris_tarihi: toIso(editValues.giris),
+                    cikis_tarihi: toIso(editValues.cikis),
+                    admin_locked: lockChecked,
+                    workday_date: toWorkday(editValues.giris) || null,
+                  })
+                  .eq('id', editing.id);
+                error = resp.error;
+              }
               if (!error) {
                 setEditing(null);
                 // yenile
@@ -198,6 +270,29 @@ function CalisanDetay({ calisan }) {
               }
             }}
           >Kaydet</button>
+          <button
+            onClick={async () => {
+              if (!editing) return;
+              if (!window.confirm('Bu gün için workday_date kolonunu temizlemek istiyor musunuz?')) return;
+              const { error } = await supabase
+                .from('personel_giris_cikis_duzenli')
+                .update({ workday_date: null })
+                .eq('id', editing.id);
+              if (!error) {
+                setEditing(null);
+                const { data } = await supabase
+                  .from('personel_giris_cikis_duzenli')
+                  .select('*')
+                  .eq('kullanici_id', calisan.kullanici_id ?? calisan.id)
+                  .gte('giris_tarihi', baslangic)
+                  .lte('giris_tarihi', bitis)
+                  .order('giris_tarihi', { ascending: true });
+                setGirisCikis(data || []);
+              } else {
+                alert(error.message || 'Temizleme başarısız');
+              }
+            }}
+          >Gün anahtarını temizle</button>
         </div>
       </Modal>
     </div>
