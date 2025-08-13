@@ -7,20 +7,21 @@ export default function CalisanListesi({ personeller, onCalisanSelect }) {
     return <div>Çalışan listesi boş.</div>;
   }
 
-  return (
+ return (
     <div>
       <h2>Çalışan Listesi</h2>
-      <ul style={{ listStyleType: "none", padding: 0 }}>
+      <ul>
         {personeller.map((p) => (
           <li
-            key={p.id}
-            style={{ cursor: "pointer", margin: "5px 0", padding: "5px", border: "1px solid #ccc", borderRadius: "4px" }}
-            onClick={() => onCalisanSelect(p)}
+            key={p.kullanici_id}
+            style={{ cursor: "pointer", margin: "5px 0" }}
+            onClick={() => setSeciliCalisan(p)}
           >
-            {p.isim} {p.soyisim}
+            {p.isim || `ID: ${p.kullanici_id}`} {p.soyisim || ""}
           </li>
         ))}
       </ul>
     </div>
   );
+
 }

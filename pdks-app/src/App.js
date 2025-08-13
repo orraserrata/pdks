@@ -12,8 +12,9 @@ function App() {
     async function fetchPersoneller() {
       const { data, error } = await supabase
         .from('personel_giris_cikis_duzenli')
-        .select('*')
-        .order('isim', { ascending: true });
+        .select('kullanici_id')
+        .order('kullanici_id', { ascending: true });
+		
 
       if (error) {
         console.error('Veri çekme hatası:', error);
