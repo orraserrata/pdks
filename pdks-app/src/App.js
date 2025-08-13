@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
 import PersonelListesi from './PersonelListesi';
 import PersonelGirisCikisListesi from './components/PersonelGirisCikisListesi';
+import CalisanListesi from "./components/CalisanListesi";
+import CalisanDetay from "./components/CalisanDetay";
 
 function App() {
   const [personeller, setPersoneller] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [seciliCalisan, setSeciliCalisan] = useState(null);
 
   useEffect(() => {
     async function fetchPersoneller() {
@@ -31,8 +34,22 @@ function App() {
   return (
     <div className="App">
       <h1>PDKS Uygulaması</h1>
-      <PersonelListesi personeller={personeller} />
-      <PersonelGirisCikisListesi />
+
+      <div style={{ display: 'flex', gap: '50px' }}>
+        {/* Çalışan listesi */}
+        <CalisanListesi
+        personeller={personeller}
+        onCalisanSelect={(calisan) => setSeciliCalisan(calisan)}
+      />
+
+        {/* Seçilen çalışanın detayları */}
+        <CalisanListesi personeller={personeller} setSeciliCalisan={setSeciliCalisan} />
+{seciliCalisan && <CalisanDetay calisan={seciliCalisan} />}
+      </div>
+
+      {/* Eski personel listesi ve giriş-çıkış tablosu hala kullanılacaksa */}
+      {/* <PersonelListesi personeller={personeller} />
+      <PersonelGirisCikisListesi /> */}
     </div>
   );
 }
