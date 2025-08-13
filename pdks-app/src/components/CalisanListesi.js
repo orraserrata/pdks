@@ -2,12 +2,8 @@
 import React from "react";
 import { supabase } from "../supabaseClient";
 
-export default function CalisanListesi({ personeller, onCalisanSelect }) {
-  if (!personeller || personeller.length === 0) {
-    return <div>Çalışan listesi boş.</div>;
-  }
-
- return (
+export default function CalisanListesi({ personeller, setSeciliCalisan }) {
+  return (
     <div>
       <h2>Çalışan Listesi</h2>
       <ul>
@@ -23,5 +19,4 @@ export default function CalisanListesi({ personeller, onCalisanSelect }) {
       </ul>
     </div>
   );
-
 }
