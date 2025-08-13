@@ -18,8 +18,13 @@ def save_to_supabase(records):
     for rec in records:
         user_id = rec["user_id"]
         name = rec["name"]
-        timestamp = rec["timestamp"].strftime("%Y-%m-%d %H:%M:%S")
-        
+        ts_val = rec["timestamp"]
+        if isinstance(ts_val, datetime):
+            timestamp = ts_val.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            # Beklenmedik tipte ise stringe çevirmeyi dene
+            timestamp = str(ts_val)
+
         if record_exists("personel_giris_cikis", user_id, timestamp):
             print(f"Zaten var, eklenmedi: {user_id} - {timestamp}")
             continue
@@ -28,6 +33,9 @@ def save_to_supabase(records):
             "kullanici_id": user_id,
             "isim": name,
             "giris_tarihi": timestamp,
+            "device_uid": rec.get("device_uid"),
+            "status_code": rec.get("status_code"),
+            "verify_method": rec.get("verify_method"),
         }
 
         response = supabase.table("personel_giris_cikis").insert(record).execute()
@@ -39,7 +47,10 @@ def save_to_supabase(records):
 
 def get_raw_attendance():
     """Ham tabloyu al"""
-    result = supabase.table("personel_giris_cikis").select("kullanici_id,giris_tarihi").execute()
+    result = supabase.table("personel_giris_cikis") \
+        .select("kullanici_id,giris_tarihi") \
+        .order("giris_tarihi", desc=False) \
+        .execute()
     if result.error:
         print("Hata supabase select:", result.error)
         return []
@@ -53,18 +64,26 @@ def generate_pairs(attendance):
 
     for row in attendance:
         user = row['kullanici_id']
-        time = row['giris_tarihi']
-        attendance_by_user.setdefault(user, []).append(time)
+        time_str = row['giris_tarihi']
+        # string -> datetime
+        try:
+            time_dt = datetime.fromisoformat(time_str)
+        except Exception:
+            # Fallback: zaten datetime olabilir
+            time_dt = time_str if isinstance(time_str, datetime) else None
+        if time_dt is None:
+            continue
+        attendance_by_user.setdefault(user, []).append(time_dt)
 
     for user, times in attendance_by_user.items():
         times.sort()
-        for i in range(0, len(times)-1, 2):
+        for i in range(0, len(times) - 1, 2):
             giris = times[i]
-            cikis = times[i+1] if i+1 < len(times) else None
+            cikis = times[i + 1] if i + 1 < len(times) else None
             pairs.append({
                 "kullanici_id": user,
-                "giris_tarihi": giris,
-                "cikis_tarihi": cikis
+                "giris_tarihi": giris.isoformat(sep=' '),
+                "cikis_tarihi": cikis.isoformat(sep=' ') if cikis else None,
             })
     return pairs
 
@@ -92,13 +111,16 @@ def main():
         users = {user.user_id: user.name for user in conn.get_users()}
         attendance = conn.get_attendance()
 
-         # ID → isim ekle
+         # ID → isim ekle ve cihaz alanlarını taşı
         attendance_records = []
         for a in attendance:
             attendance_records.append({
                 "user_id": a.user_id,
                 "name": users.get(a.user_id, "Bilinmiyor"),
-                "timestamp": a.timestamp
+                "timestamp": a.timestamp,
+                "device_uid": getattr(a, "uid", None),
+                "status_code": getattr(a, "status", None),
+                "verify_method": getattr(a, "punch", None),
             })
 
         save_to_supabase(attendance_records)
