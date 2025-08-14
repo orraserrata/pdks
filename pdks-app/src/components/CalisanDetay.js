@@ -118,8 +118,16 @@ function CalisanDetay({ calisan }) {
         <tbody>
           {gunlerWithData.map((g, i) => {
             const row = g._row || null;
+            const isManualEdit = row && row.admin_locked;
+            const isAbsent = !row;
             return (
-              <tr key={i} className={!row ? "absent-row" : ""}>
+              <tr key={i} className={
+                isAbsent ? "absent-row" : 
+                isManualEdit ? "manual-edit-row" : ""
+              } style={
+                isAbsent ? { backgroundColor: '#fff8c5' } : 
+                isManualEdit ? { backgroundColor: '#ff0000a8' } : {}
+              }>
                 <td>{g.tarih}</td>
                 <td>{g.gun}</td>
                 <td>{row ? g.giris : '-'}</td>

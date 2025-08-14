@@ -89,3 +89,12 @@
 .absent-row td {
   background-color: #fff8c5;
 }
+
+/* Manuel güncellenmiş kayıt vurgusu */
+.manual-edit-row {
+  background-color: #ff0000a8; /* açık kırmızı */
+}
+
+.manual-edit-row td {
+  background-color: #ff0000a8;
+}
