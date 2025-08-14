@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
+import './App.css';
 import CalisanListesi from "./components/CalisanListesi";
 import CalisanDetay from "./components/CalisanDetay";
 import PersonelYonetimi from "./components/PersonelYonetimi";
 import AdminPanel from "./components/AdminPanel";
 import AdminLogin from "./components/AdminLogin";
 import AdminSettings from "./components/AdminSettings";
+import TumCalisanlar from "./components/TumCalisanlar";
 import Modal from "./components/Modal";
 
 function App() {
@@ -61,6 +63,12 @@ function App() {
         >
           Personel Yönetimi
         </button>
+        <button
+          className={`tab ${activeTab === 'tumCalisanlar' ? 'tab-active' : ''}`}
+          onClick={() => setActiveTab('tumCalisanlar')}
+        >
+          Tüm Çalışanlar
+        </button>
         <button className={`tab ${activeTab === 'admin' ? 'tab-active' : ''}`} onClick={() => setActiveTab('admin')}>Admin</button>
         </div>
         <div className="account">
@@ -78,6 +86,10 @@ function App() {
       {activeTab === 'personel' ? (
         <div className="card">
           <PersonelYonetimi onChanged={() => window.location.reload()} />
+        </div>
+      ) : activeTab === 'tumCalisanlar' ? (
+        <div className="card">
+          <TumCalisanlar />
         </div>
       ) : activeTab === 'admin' ? (
         <div className="card">

@@ -119,7 +119,7 @@ function CalisanDetay({ calisan }) {
           {gunlerWithData.map((g, i) => {
             const row = g._row || null;
             return (
-              <tr key={i}>
+              <tr key={i} className={!row ? "absent-row" : ""}>
                 <td>{g.tarih}</td>
                 <td>{g.gun}</td>
                 <td>{row ? g.giris : '-'}</td>

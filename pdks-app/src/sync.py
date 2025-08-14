@@ -5,7 +5,10 @@ import os
 
 try:
     from dotenv import load_dotenv  # type: ignore
-    load_dotenv()
+    import os
+    # Ana dizindeki .env dosyasını yükle
+    env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+    load_dotenv(env_path)
 except Exception:
     pass
 
@@ -71,6 +74,40 @@ def get_raw_attendance():
         return []
     return result.data
 
+def get_new_raw_attendance():
+    """Sadece henüz işlenmemiş ham kayıtları al"""
+    print("Yeni ham kayıtlar kontrol ediliyor...")
+    
+    # En son işlenen kaydın tarihini bul
+    last_processed = supabase.table("personel_giris_cikis_duzenli") \
+        .select("giris_tarihi") \
+        .order("giris_tarihi", desc=True) \
+        .limit(1) \
+        .execute()
+    
+    last_date = None
+    if not getattr(last_processed, 'error', None) and getattr(last_processed, 'data', []):
+        last_date = getattr(last_processed, 'data', [])[0]['giris_tarihi']
+        print(f"Son işlenen kayıt tarihi: {last_date}")
+    
+    # Yeni kayıtları al
+    query = supabase.table("personel_giris_cikis") \
+        .select("kullanici_id,giris_tarihi") \
+        .order("giris_tarihi", desc=False)
+    
+    if last_date:
+        query = query.gt("giris_tarihi", last_date)
+    
+    result = query.execute()
+    err = getattr(result, 'error', None)
+    if err:
+        print("Hata yeni kayıt select:", err)
+        return []
+    
+    new_records = getattr(result, 'data', [])
+    print(f"Yeni {len(new_records)} ham kayıt bulundu.")
+    return new_records
+
 
 def generate_pairs(attendance):
     """Ardışık giriş-çıkış çiftlerini oluştur.
@@ -79,7 +116,7 @@ def generate_pairs(attendance):
     Ekran gösteriminde tarih/gün, iş günü başlangıcı kaydırması ile hesaplanır.
     """
     pairs = []
-    attendance_by_user = {}
+    attendance_by_user_and_day = {}
 
     for row in attendance:
         user = row['kullanici_id']
@@ -91,17 +128,39 @@ def generate_pairs(attendance):
             time_dt = time_str if isinstance(time_str, datetime) else None
         if time_dt is None:
             continue
-        attendance_by_user.setdefault(user, []).append(time_dt)
+        
+        # İş günü kaydırması - gece yarısından sonraki kayıtlar için özel mantık
+        day_start_hour = int(os.getenv("SYNC_DAY_START_HOUR", "5"))
+        
+        # Eğer saat 00:00-05:00 arasındaysa, bu kayıt önceki günün devamı
+        # Eğer saat 05:00-23:59 arasındaysa, bu kayıt bugünün başlangıcı
+        hour = time_dt.hour
+        
+        if hour < day_start_hour:
+            # Gece yarısından sonra, önceki günün devamı
+            workday_dt = time_dt - timedelta(days=1)
+        else:
+            # Gündüz, bugünün başlangıcı
+            workday_dt = time_dt
+            
+        workday_date = workday_dt.date().isoformat()
+        
+        attendance_by_user_and_day.setdefault(user, {}).setdefault(workday_date, []).append(time_dt)
 
-    for user, times in attendance_by_user.items():
-        times.sort()
-        for i in range(0, len(times), 2):
-            giris = times[i]
-            cikis = times[i + 1] if i + 1 < len(times) else None
+    for user, days_data in attendance_by_user_and_day.items():
+        for workday_date, times in days_data.items():
+            times.sort()  # Tarihe göre sırala
+            
+            # Her iş günü için ilk giriş ve son çıkış
+            giris = times[0]
+            cikis = times[-1] if len(times) > 1 else None  # Tek kayıt varsa çıkış null
+
             pairs.append({
                 "kullanici_id": user,
                 "giris_tarihi": giris.isoformat(sep=' '),
                 "cikis_tarihi": cikis.isoformat(sep=' ') if cikis else None,
+                "workday_date": workday_date,
+                "admin_locked": False
             })
 
     return pairs
@@ -168,16 +227,13 @@ def save_pairs(pairs):
     """Düzenli tabloya kaydet.
     Kural: Aynı kullanici_id + workday_date için tek satır olsun. Eğer mevcut satır admin_locked=true ise dokunma.
     Yoksa güncelle; mevcut yoksa ekle.
-    Not: workday_date kolonu için SQL migration gerekir.
     """
-    day_start_hour = int(os.getenv("SYNC_DAY_START_HOUR", "5"))
-
-    def compute_workday(date_str: str) -> str:
-        dt = datetime.fromisoformat(date_str)
-        return (dt - timedelta(hours=day_start_hour)).date().isoformat()
-
     for p in pairs:
-        workday = compute_workday(p["giris_tarihi"]) if p.get("giris_tarihi") else None
+        workday = p.get("workday_date")
+        if not workday:
+            print(f"Workday date eksik, atlandı: {p}")
+            continue
+            
         # 1) Mevcut bir kayıt var mı? (workday_date üzerinden)
         existing = supabase.table("personel_giris_cikis_duzenli") \
             .select("id, admin_locked") \
@@ -196,18 +252,18 @@ def save_pairs(pairs):
             upd = supabase.table("personel_giris_cikis_duzenli").update({
                 "giris_tarihi": p["giris_tarihi"],
                 "cikis_tarihi": p["cikis_tarihi"],
+                "admin_locked": False  # Cihazdan gelen veri kilidi açar
             }).eq("id", row["id"]).execute()
             if getattr(upd, 'error', None):
-                print("Hata düzenli tablo update:", upd.error)
+                print("Hata düzenli tablo update:", getattr(upd, 'error', None))
             else:
                 print(f"Düzenli kayıt güncellendi: {p}")
         else:
             # Ekle
             insert_payload = dict(p)
-            insert_payload["workday_date"] = workday
             res = supabase.table("personel_giris_cikis_duzenli").insert(insert_payload).execute()
             if getattr(res, 'error', None):
-                print("Hata düzenli tablo insert:", res.error)
+                print("Hata düzenli tablo insert:", getattr(res, 'error', None))
             else:
                 print(f"Düzenli kayıt eklendi: {insert_payload}")
 
@@ -241,10 +297,13 @@ def main():
         save_to_supabase(attendance_records)
         conn.disconnect()
 
-        # Ham veriyi alıp düzenle
-        raw_data = get_raw_attendance()
-        pairs = generate_pairs(raw_data)
-        save_pairs(pairs)
+        # Sadece yeni ham veriyi alıp düzenle
+        new_raw_data = get_new_raw_attendance()
+        if new_raw_data:
+            pairs = generate_pairs(new_raw_data)
+            save_pairs(pairs)
+        else:
+            print("İşlenecek yeni kayıt yok.")
 
     except Exception as e:
         print("Hata:", e)

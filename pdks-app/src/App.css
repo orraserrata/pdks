@@ -51,6 +51,8 @@
 }
 
 .personRow {
+  display: block;
+  width: 100%;
   text-align: left;
   padding: 10px 12px;
   border: 1px solid #e5e7eb;
@@ -77,4 +79,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Devamsız gün vurgusu */
+.absent-row {
+  background-color: #fff8c5; /* yumuşak sarı */
+}
+
+.absent-row td {
+  background-color: #fff8c5;
 }
