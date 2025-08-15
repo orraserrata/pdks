@@ -52,7 +52,7 @@ function App() {
       <div className="App container">
         <div className="toolbar">
           <div className="toolbar-left">
-            <h1 className="appTitle">PDKS - DEPLOY TEST 2025</h1>
+            <h1 className="appTitle">PDKS - FINAL TEST</h1>
           </div>
           <div className="toolbar-center">
             <div className="tabs">
