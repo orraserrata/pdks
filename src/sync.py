@@ -114,6 +114,8 @@ def generate_pairs(attendance):
 
     Not: Çift üretimi gün sınırından bağımsızdır; ardışık iki kayıt bir çift kabul edilir.
     Ekran gösteriminde tarih/gün, iş günü başlangıcı kaydırması ile hesaplanır.
+    
+    YENİ: Cihazın punch bilgisini kullanarak daha akıllı filtreleme yapar.
     """
     pairs = []
     attendance_by_user_and_day = {}
@@ -151,9 +153,28 @@ def generate_pairs(attendance):
         for workday_date, times in days_data.items():
             times.sort()  # Tarihe göre sırala
             
+            # YENİ: Minimum süre kontrolü - çok yakın kayıtları filtrele
+            min_interval_seconds = int(os.getenv("SYNC_MIN_INTERVAL_SECONDS", "300"))  # Varsayılan 5 dakika (300 saniye)
+            min_interval = timedelta(seconds=min_interval_seconds)
+            
+            filtered_times = []
+            for i, time in enumerate(times):
+                if i == 0:
+                    # İlk kayıt her zaman alınır
+                    filtered_times.append(time)
+                    print(f"İlk kayıt alındı: {user} - {time}")
+                else:
+                    # Son kayıttan minimum süre geçmişse al
+                    time_diff = time - filtered_times[-1]
+                    if time_diff >= min_interval:
+                        filtered_times.append(time)
+                        print(f"Yeni kayıt alındı: {user} - {time} (önceki: {filtered_times[-1]}, fark: {time_diff.total_seconds():.0f}s)")
+                    else:
+                        print(f"Çok yakın kayıt filtrelendi: {user} - {time} (önceki: {filtered_times[-1]}, fark: {time_diff.total_seconds():.0f}s)")
+            
             # Her iş günü için ilk giriş ve son çıkış
-            giris = times[0]
-            cikis = times[-1] if len(times) > 1 else None  # Tek kayıt varsa çıkış null
+            giris = filtered_times[0]
+            cikis = filtered_times[-1] if len(filtered_times) > 1 else None  # Tek kayıt varsa çıkış null
 
             pairs.append({
                 "kullanici_id": user,
@@ -280,13 +301,29 @@ def main():
          # ID → isim ekle ve cihaz alanlarını taşı
         attendance_records = []
         for a in attendance:
+                        # Ham veriyi logla
+            punch_info = getattr(a, "punch", None)
+            status_info = getattr(a, "status", None)
+            print(f"Ham veri: UserID={a.user_id}, Time={a.timestamp}, Status={status_info}, Punch={punch_info}, UID={getattr(a, 'uid', 'N/A')}")
+            
+            # Punch bilgisini analiz et
+            is_entry = True  # Varsayılan olarak giriş
+            if punch_info is not None:
+                # Punch değeri 0 ise giriş, 1 ise çıkış olabilir (cihaza göre değişir)
+                if punch_info == 1:
+                    is_entry = False
+                    print(f"Çıkış tespit edildi: {a.user_id} - {a.timestamp}")
+                elif punch_info == 0:
+                    print(f"Giriş tespit edildi: {a.user_id} - {a.timestamp}")
+            
             attendance_records.append({
                 "user_id": a.user_id,
                 "name": users.get(a.user_id, "Bilinmiyor"),
                 "timestamp": a.timestamp,
                 "device_uid": getattr(a, "uid", None),
-                "status_code": getattr(a, "status", None),
-                "verify_method": getattr(a, "punch", None),
+                "status_code": status_info,
+                "verify_method": punch_info,
+                "is_entry": is_entry,  # Yeni alan
             })
 
         # Personel kayıtlarını cihazdan otomatik oluşturmak istenirse açın:
