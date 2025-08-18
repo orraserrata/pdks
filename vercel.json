@@ -7,6 +7,11 @@
       "config": { "distDir": "build" }
     }
   ],
+  "build": {
+    "env": {
+      "CI": ""
+    }
+  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
