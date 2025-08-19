@@ -44,10 +44,8 @@ export default function GirisYap({ onSuccess }) {
         
         if (onSuccess) onSuccess();
         
-        // Safari için sayfa yenileme yerine state güncelleme
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+        // Sayfa yenileme yerine modal'ı kapat
+        console.log('Giriş başarılı, modal kapatılıyor');
       }
     } catch (err) {
       console.error('Beklenmeyen hata:', err);

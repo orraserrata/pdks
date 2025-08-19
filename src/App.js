@@ -136,15 +136,15 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state change:', event, session);
       
-      if (event === 'SIGNED_IN') {
-        console.log('Kullanıcı giriş yaptı');
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        console.log('Kullanıcı giriş yaptı veya token yenilendi');
         setSession(session);
       } else if (event === 'SIGNED_OUT') {
         console.log('Kullanıcı çıkış yaptı');
         setSession(null);
         setUserProfile(null);
-      } else if (event === 'TOKEN_REFRESHED') {
-        console.log('Token yenilendi');
+      } else if (event === 'INITIAL_SESSION') {
+        console.log('İlk session yüklendi');
         setSession(session);
       }
     });
@@ -202,19 +202,25 @@ function App() {
               {session ? (
                 <>
                   <span>Hesap: {session.user?.email}</span>
-                  <button className="tab" onClick={() => {
+                  <button className="tab" onClick={async () => {
                     console.log("Çıkış butonuna tıklandı");
-                    // Önce localStorage'ı temizle
-                    localStorage.clear();
-                    sessionStorage.clear();
                     
-                    supabase.auth.signOut().then(() => {
+                    try {
+                      await supabase.auth.signOut();
                       console.log("Çıkış başarılı");
-                      setSession(null); // Session state'ini temizle
-                      window.location.reload(); // Sayfayı yenile
-                    }).catch((error) => {
+                      
+                      // State'leri temizle
+                      setSession(null);
+                      setUserProfile(null);
+                      
+                      // Storage'ları temizle
+                      localStorage.clear();
+                      sessionStorage.clear();
+                      
+                      console.log("Tüm veriler temizlendi");
+                    } catch (error) {
                       console.error("Çıkış hatası:", error);
-                    });
+                    }
                   }}>Çıkış</button>
                 </>
               ) : (

@@ -15,7 +15,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: {
       getItem: (key) => {
         try {
-          // Safari için localStorage yerine sessionStorage kullan
+          // Önce localStorage'dan dene
+          const value = localStorage.getItem(key);
+          if (value) return value;
+          
+          // localStorage'da yoksa sessionStorage'dan dene
           return sessionStorage.getItem(key);
         } catch (error) {
           console.error('Storage getItem error:', error);
@@ -24,14 +28,22 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       },
       setItem: (key, value) => {
         try {
-          // Safari için sessionStorage kullan
+          // Hem localStorage hem sessionStorage'a kaydet
+          localStorage.setItem(key, value);
           sessionStorage.setItem(key, value);
         } catch (error) {
           console.error('Storage setItem error:', error);
+          // Hata durumunda sadece sessionStorage'a kaydet
+          try {
+            sessionStorage.setItem(key, value);
+          } catch (e) {
+            console.error('SessionStorage setItem error:', e);
+          }
         }
       },
       removeItem: (key) => {
         try {
+          localStorage.removeItem(key);
           sessionStorage.removeItem(key);
         } catch (error) {
           console.error('Storage removeItem error:', error);
