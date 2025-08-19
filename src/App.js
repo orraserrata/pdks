@@ -118,9 +118,38 @@ function App() {
   }, [session]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, sess) => setSession(sess));
-    return () => sub.subscription.unsubscribe();
+    // İlk yüklemede session'ı al
+    const getInitialSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Initial session:', session);
+        setSession(session);
+      } catch (error) {
+        console.error('Session getirme hatası:', error);
+        setSession(null);
+      }
+    };
+
+    getInitialSession();
+
+    // Auth state değişikliklerini dinle
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', event, session);
+      
+      if (event === 'SIGNED_IN') {
+        console.log('Kullanıcı giriş yaptı');
+        setSession(session);
+      } else if (event === 'SIGNED_OUT') {
+        console.log('Kullanıcı çıkış yaptı');
+        setSession(null);
+        setUserProfile(null);
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('Token yenilendi');
+        setSession(session);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   if (loading) return <div className="container">Yükleniyor...</div>;

@@ -20,23 +20,37 @@ export default function GirisYap({ onSuccess }) {
     setError("");
 
     try {
+      console.log('Giriş yapılıyor:', form.email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: form.email,
         password: form.password
       });
 
       if (error) {
+        console.error('Giriş hatası:', error);
         setError(error.message);
       } else {
+        console.log('Giriş başarılı:', data);
+        
+        // Session'ı manuel olarak kontrol et
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Yeni session:', session);
+        
         setForm({
           email: "",
           password: ""
         });
         
         if (onSuccess) onSuccess();
-        alert("Giriş başarılı!");
+        
+        // Safari için sayfa yenileme yerine state güncelleme
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       }
     } catch (err) {
+      console.error('Beklenmeyen hata:', err);
       setError(String(err.message || err));
     } finally {
       setLoading(false);
