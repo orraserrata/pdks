@@ -12,6 +12,7 @@ function CalisanDetay({ calisan }) {
   const [baslangic, setBaslangic] = useState(format(new Date(), "yyyy-MM-dd"));
   const [bitis, setBitis] = useState(format(new Date(), "yyyy-MM-dd"));
   const [session, setSession] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [editing, setEditing] = useState(null); // { id?, giris_tarihi?, cikis_tarihi?, isNew? }
   const [editValues, setEditValues] = useState({ giris: "", cikis: "" });
@@ -25,6 +26,66 @@ function CalisanDetay({ calisan }) {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, sess) => setSession(sess));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // Kullanıcı profilini yükle
+  useEffect(() => {
+    async function loadUserProfile() {
+      if (!session?.user) {
+        setUserProfile(null);
+        return;
+      }
+      
+      try {
+        const email = session?.user?.email || null;
+        
+        // Önce kullanici_profilleri tablosundan kontrol et
+        let { data, error } = await supabase
+          .from("kullanici_profilleri")
+          .select("*")
+          .eq("email", email)
+          .maybeSingle();
+        
+        if (data) {
+          setUserProfile(data);
+        } else {
+          // Profil bulunamadı - admin_users tablosundan kontrol et
+          const { data: authUser } = await supabase.auth.getUser();
+          
+          if (authUser?.user?.id) {
+            const adminCheck = await supabase
+              .from("admin_users")
+              .select("user_id")
+              .eq("user_id", authUser.user.id)
+              .maybeSingle();
+            
+            if (adminCheck.data) {
+              // Admin kullanıcı - geçici admin profili oluştur
+              const tempAdminProfile = {
+                id: -1,
+                kullanici_id: null,
+                email: email,
+                isim: "Admin",
+                soyisim: "Kullanıcı",
+                is_admin: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              };
+              setUserProfile(tempAdminProfile);
+            } else {
+              setUserProfile(null);
+            }
+          } else {
+            setUserProfile(null);
+          }
+        }
+      } catch (err) {
+        console.error("Profil yükleme hatası:", err);
+        setUserProfile(null);
+      }
+    }
+
+    loadUserProfile();
+  }, [session]);
 
   useEffect(() => {
     async function fetchGirisCikis() {
@@ -201,7 +262,7 @@ function CalisanDetay({ calisan }) {
               color: "#374151",
               borderBottom: "2px solid #e5e7eb"
             }}>Hata Bildir</th>
-            {session && <th style={{ 
+            {session && userProfile && userProfile.is_admin && <th style={{ 
               padding: "16px 12px", 
               textAlign: "left", 
               fontSize: "14px", 
@@ -292,7 +353,7 @@ function CalisanDetay({ calisan }) {
                     Hata Bildir
                   </button>
                 </td>
-                {session && (
+                {session && userProfile && userProfile.is_admin && (
                   <td style={{ padding: "16px 12px" }}>
                     {row ? (
                       <div style={{ display: "flex", gap: "8px" }}>

@@ -12,6 +12,7 @@ export default function PersonelYonetimi({ onChanged }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [session, setSession] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
   const [kullaniciProfilleri, setKullaniciProfilleri] = useState([]);
   const [personeller, setPersoneller] = useState([]);
   const [filter, setFilter] = useState("active");
@@ -37,6 +38,66 @@ export default function PersonelYonetimi({ onChanged }) {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, sess) => setSession(sess));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // Kullanıcı profilini yükle
+  useEffect(() => {
+    async function loadUserProfile() {
+      if (!session?.user) {
+        setUserProfile(null);
+        return;
+      }
+      
+      try {
+        const email = session?.user?.email || null;
+        
+        // Önce kullanici_profilleri tablosundan kontrol et
+        let { data, error } = await supabase
+          .from("kullanici_profilleri")
+          .select("*")
+          .eq("email", email)
+          .maybeSingle();
+        
+        if (data) {
+          setUserProfile(data);
+        } else {
+          // Profil bulunamadı - admin_users tablosundan kontrol et
+          const { data: authUser } = await supabase.auth.getUser();
+          
+          if (authUser?.user?.id) {
+            const adminCheck = await supabase
+              .from("admin_users")
+              .select("user_id")
+              .eq("user_id", authUser.user.id)
+              .maybeSingle();
+            
+            if (adminCheck.data) {
+              // Admin kullanıcı - geçici admin profili oluştur
+              const tempAdminProfile = {
+                id: -1,
+                kullanici_id: null,
+                email: email,
+                isim: "Admin",
+                soyisim: "Kullanıcı",
+                is_admin: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              };
+              setUserProfile(tempAdminProfile);
+            } else {
+              setUserProfile(null);
+            }
+          } else {
+            setUserProfile(null);
+          }
+        }
+      } catch (err) {
+        console.error("Profil yükleme hatası:", err);
+        setUserProfile(null);
+      }
+    }
+
+    loadUserProfile();
+  }, [session]);
 
   // Kullanıcı profillerini yükle
   useEffect(() => {
@@ -293,7 +354,9 @@ export default function PersonelYonetimi({ onChanged }) {
 
       {session ? (
         <>
-          <form onSubmit={handleSubmit} style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+                     {/* Personel Ekleme Formu - Sadece Admin */}
+           {userProfile && userProfile.is_admin && (
+            <form onSubmit={handleSubmit} style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
             <label>
               Kullanıcı ID
               <input
@@ -352,6 +415,7 @@ export default function PersonelYonetimi({ onChanged }) {
               {loading ? "Ekleniyor..." : "Ekle"}
             </button>
           </form>
+          )}
 
           {error && <div style={{ color: "red", marginTop: 8 }}>{error}</div>}
 
@@ -418,7 +482,9 @@ export default function PersonelYonetimi({ onChanged }) {
                   <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>Soyisim</th>
                   <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>İşe Giriş Tarihi</th>
                   <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>Durum</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>İşlemler</th>
+                  {userProfile && userProfile.is_admin && (
+                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>İşlemler</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -440,7 +506,8 @@ export default function PersonelYonetimi({ onChanged }) {
                         {p.aktif ? "Aktif" : "Pasif"}
                       </span>
                     </td>
-                    <td style={{ padding: "12px 16px", fontSize: "14px" }}>
+                    {userProfile && userProfile.is_admin && (
+                      <td style={{ padding: "12px 16px", fontSize: "14px" }}>
                       {editingId === p.kullanici_id ? (
                         <form onSubmit={handleEditSubmit} style={{ display: "flex", gap: "4px" }}>
                           <input
@@ -590,15 +657,17 @@ export default function PersonelYonetimi({ onChanged }) {
                           </button>
                         </>
                       )}
-                    </td>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          {/* Kullanıcı Profilleri Yönetimi */}
-          <div style={{ marginTop: "40px" }}>
+                     {/* Kullanıcı Profilleri Yönetimi - Sadece Admin */}
+           {userProfile && userProfile.is_admin && (
+            <div style={{ marginTop: "40px" }}>
             <h3 style={{ marginBottom: "20px", color: "#374151", fontSize: "18px", fontWeight: "600" }}>
               Kullanıcı Hesapları Yönetimi
             </h3>
@@ -691,6 +760,7 @@ export default function PersonelYonetimi({ onChanged }) {
               </table>
             </div>
           </div>
+          )}
         </>
       ) : (
         <div style={{ padding: "20px", backgroundColor: "#fef3c7", border: "1px solid #f59e0b", borderRadius: "8px" }}>
