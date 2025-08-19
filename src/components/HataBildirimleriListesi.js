@@ -9,6 +9,7 @@ export default function HataBildirimleriListesi() {
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("tumu"); // tumu, beklemede, inceleniyor, cozuldu, reddedildi
   const [session, setSession] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
 
   useEffect(() => {
     loadBildirimler();
@@ -19,6 +20,66 @@ export default function HataBildirimleriListesi() {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, sess) => setSession(sess));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // Kullanıcı profilini yükle
+  useEffect(() => {
+    async function loadUserProfile() {
+      if (!session?.user) {
+        setUserProfile(null);
+        return;
+      }
+      
+      try {
+        const email = session?.user?.email || null;
+        
+        // Önce kullanici_profilleri tablosundan kontrol et
+        let { data, error } = await supabase
+          .from("kullanici_profilleri")
+          .select("*")
+          .eq("email", email)
+          .maybeSingle();
+        
+        if (data) {
+          setUserProfile(data);
+        } else {
+          // Profil bulunamadı - admin_users tablosundan kontrol et
+          const { data: authUser } = await supabase.auth.getUser();
+          
+          if (authUser?.user?.id) {
+            const adminCheck = await supabase
+              .from("admin_users")
+              .select("user_id")
+              .eq("user_id", authUser.user.id)
+              .maybeSingle();
+            
+            if (adminCheck.data) {
+              // Admin kullanıcı - geçici admin profili oluştur
+              const tempAdminProfile = {
+                id: -1,
+                kullanici_id: null,
+                email: email,
+                isim: "Admin",
+                soyisim: "Kullanıcı",
+                is_admin: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              };
+              setUserProfile(tempAdminProfile);
+            } else {
+              setUserProfile(null);
+            }
+          } else {
+            setUserProfile(null);
+          }
+        }
+      } catch (err) {
+        console.error("Profil yükleme hatası:", err);
+        setUserProfile(null);
+      }
+    }
+
+    loadUserProfile();
+  }, [session]);
 
   async function loadBildirimler() {
     setLoading(true);
@@ -111,6 +172,29 @@ export default function HataBildirimleriListesi() {
   if (loading) return <div>Yükleniyor...</div>;
   if (error) return <div style={{ color: "red" }}>{error}</div>;
 
+  // Giriş yapılmamışsa uyarı göster
+  if (!session) {
+    return (
+      <div>
+        <h2>Hata Bildirimleri</h2>
+        <div style={{
+          padding: "12px",
+          backgroundColor: "#fef3c7",
+          border: "1px solid #f59e0b",
+          borderRadius: "6px",
+          marginBottom: "12px"
+        }}>
+          <div style={{ fontSize: "14px", color: "#92400e", fontWeight: "500", marginBottom: "4px" }}>
+            🔒 Giriş Gerekli
+          </div>
+          <div style={{ fontSize: "13px", color: "#92400e" }}>
+            Hata bildirimlerini görüntülemek için lütfen önce hesap oluşturun veya giriş yapın.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h2>Hata Bildirimleri</h2>
@@ -202,7 +286,7 @@ export default function HataBildirimleriListesi() {
                   color: "#374151",
                   borderBottom: "2px solid #e5e7eb"
                 }}>Bildirim Tarihi</th>
-                {session && <th style={{ 
+                {userProfile?.is_admin && <th style={{ 
                   padding: "16px 12px", 
                   textAlign: "left", 
                   fontSize: "14px", 
@@ -295,7 +379,7 @@ export default function HataBildirimleriListesi() {
                   }}>
                     {format(new Date(bildirim.bildirim_tarihi), "dd.MM.yyyy HH:mm")}
                   </td>
-                  {session && (
+                  {userProfile?.is_admin && (
                     <td style={{ 
                       padding: "16px 12px", 
                       fontSize: "14px", 

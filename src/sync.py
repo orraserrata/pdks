@@ -28,7 +28,6 @@ def record_exists(table, user_id, timestamp):
     result = supabase.table(table).select("*").eq("kullanici_id", user_id).eq("giris_tarihi", timestamp).execute()
     return bool(result.data)
 
-
 def save_to_supabase(records):
     """Ham veriyi supabase'e kaydet"""
     for rec in records:
@@ -61,7 +60,6 @@ def save_to_supabase(records):
         else:
             print(f"Ham kayıt eklendi: {record}")
 
-
 def get_raw_attendance():
     """Ham tabloyu al"""
     result = supabase.table("personel_giris_cikis") \
@@ -73,6 +71,11 @@ def get_raw_attendance():
         print("Hata supabase select:", err)
         return []
     return result.data
+
+def get_all_raw_attendance():
+    """Tüm ham kayıtları al"""
+    print("Tüm ham kayıtlar alınıyor...")
+    return get_raw_attendance()
 
 def get_new_raw_attendance():
     """Sadece henüz işlenmemiş ham kayıtları al"""
@@ -101,22 +104,15 @@ def get_new_raw_attendance():
     result = query.execute()
     err = getattr(result, 'error', None)
     if err:
-        print("Hata yeni kayıt select:", err)
+        print("Hata supabase select:", err)
         return []
     
-    new_records = getattr(result, 'data', [])
-    print(f"Yeni {len(new_records)} ham kayıt bulundu.")
-    return new_records
-
+    data = getattr(result, 'data', [])
+    print(f"Yeni kayıt sayısı: {len(data)}")
+    return data
 
 def generate_pairs(attendance):
-    """Ardışık giriş-çıkış çiftlerini oluştur.
-
-    Not: Çift üretimi gün sınırından bağımsızdır; ardışık iki kayıt bir çift kabul edilir.
-    Ekran gösteriminde tarih/gün, iş günü başlangıcı kaydırması ile hesaplanır.
-    
-    YENİ: Cihazın punch bilgisini kullanarak daha akıllı filtreleme yapar.
-    """
+    """Ham kayıtları giriş-çıkış çiftlerine dönüştür"""
     pairs = []
     attendance_by_user_and_day = {}
 
@@ -172,20 +168,28 @@ def generate_pairs(attendance):
                     else:
                         print(f"Çok yakın kayıt filtrelendi: {user} - {time} (önceki: {filtered_times[-1]}, fark: {time_diff.total_seconds():.0f}s)")
             
-            # Her iş günü için ilk giriş ve son çıkış
-            giris = filtered_times[0]
-            cikis = filtered_times[-1] if len(filtered_times) > 1 else None  # Tek kayıt varsa çıkış null
+            # Ardışık giriş-çıkış çiftleri oluştur
+            for i in range(0, len(filtered_times), 2):
+                giris = filtered_times[i]
+                
+                # Eğer bir sonraki kayıt varsa, o çıkış olur
+                if i + 1 < len(filtered_times):
+                    cikis = filtered_times[i + 1]
+                    print(f"Çift oluşturuldu: {user} - Giriş: {giris}, Çıkış: {cikis}")
+                else:
+                    # Son kayıt tek başına kalırsa, sadece giriş olur
+                    cikis = None
+                    print(f"Tek giriş: {user} - Giriş: {giris} (çıkış yok)")
 
-            pairs.append({
-                "kullanici_id": user,
-                "giris_tarihi": giris.isoformat(sep=' '),
-                "cikis_tarihi": cikis.isoformat(sep=' ') if cikis else None,
-                "workday_date": workday_date,
-                "admin_locked": False
-            })
+                pairs.append({
+                    "kullanici_id": user,
+                    "giris_tarihi": giris.isoformat(sep=' '),
+                    "cikis_tarihi": cikis.isoformat(sep=' ') if cikis else None,
+                    "workday_date": workday_date,
+                    "admin_locked": False
+                })
 
     return pairs
-
 
 def _split_name(full_name: str):
     if not full_name:
@@ -194,7 +198,6 @@ def _split_name(full_name: str):
     if len(parts) == 1:
         return parts[0], ""
     return parts[0], parts[1]
-
 
 def ensure_personel(users_map, attendance_list):
     """Cihazdaki kullanıcıları personel tablosuna (eksikleri) ekle.
@@ -217,36 +220,40 @@ def ensure_personel(users_map, attendance_list):
             earliest_by_user[uid_int] = day
 
     # Payload oluştur
-    payloads = []
-    for uid_str, name in users_map.items():
+    for user_id, name in users_map.items():
         try:
-            uid_int = int(uid_str)
+            user_id_int = int(user_id)
         except Exception:
             continue
-        isim, soyisim = _split_name(name)
-        ise_giris = earliest_by_user.get(uid_int) or datetime.today().date().isoformat()
-        payloads.append({
-            "kullanici_id": uid_int,
-            "isim": isim or "Bilinmiyor",
-            "soyisim": soyisim or "",
-            "ise_giris_tarihi": ise_giris,
-        })
-
-    if not payloads:
-        return
-
-    # Upsert ile var olanları güncellemeden atla (unique: kullanici_id)
-    res = supabase.table("personel").upsert(payloads).execute()
-    err = getattr(res, 'error', None)
-    if err:
-        print("Personel upsert hatası:", err)
-    else:
-        print(f"Personel upsert tamamlandı. {len(payloads)} kayıt denendi.")
-
+        
+        # Mevcut var mı kontrol et
+        existing = supabase.table("personel").select("kullanici_id, aktif").eq("kullanici_id", user_id_int).execute()
+        if getattr(existing, 'data', []):
+            existing_data = existing.data[0]
+            if not existing_data.get('aktif', True):
+                continue  # Pasif personel, atla
+            continue  # Zaten var ve aktif
+        
+        # Ekle
+        first_day = earliest_by_user.get(user_id_int, datetime.now().date().isoformat())
+        name_parts = _split_name(name)
+        
+        payload = {
+            "kullanici_id": user_id_int,
+            "isim": name_parts[0],
+            "soyisim": name_parts[1],
+            "ise_giris_tarihi": first_day,
+            "aktif": True
+        }
+        
+        res = supabase.table("personel").insert(payload).execute()
+        if getattr(res, 'error', None):
+            print("Hata personel insert:", getattr(res, 'error', None))
+        else:
+            print(f"Personel eklendi: {payload}")
 
 def save_pairs(pairs):
-    """Düzenli tabloya kaydet.
-    Kural: Aynı kullanici_id + workday_date için tek satır olsun. Eğer mevcut satır admin_locked=true ise dokunma.
+    """Giriş-çıkış çiftlerini düzenli tabloya kaydet.
     Yoksa güncelle; mevcut yoksa ekle.
     """
     for p in pairs:
@@ -288,7 +295,6 @@ def save_pairs(pairs):
             else:
                 print(f"Düzenli kayıt eklendi: {insert_payload}")
 
-
 def main():
     zk = ZK('192.168.0.139', port=4370)
     try:
@@ -298,10 +304,10 @@ def main():
         users = {user.user_id: user.name for user in conn.get_users()}
         attendance = conn.get_attendance()
 
-         # ID → isim ekle ve cihaz alanlarını taşı
+        # ID → isim ekle ve cihaz alanlarını taşı
         attendance_records = []
         for a in attendance:
-                        # Ham veriyi logla
+            # Ham veriyi logla
             punch_info = getattr(a, "punch", None)
             status_info = getattr(a, "status", None)
             print(f"Ham veri: UserID={a.user_id}, Time={a.timestamp}, Status={status_info}, Punch={punch_info}, UID={getattr(a, 'uid', 'N/A')}")
@@ -339,12 +345,12 @@ def main():
         if new_raw_data:
             pairs = generate_pairs(new_raw_data)
             save_pairs(pairs)
+            print(f"Yeni kayıtlar işlendi - {len(pairs)} çift oluşturuldu")
         else:
             print("İşlenecek yeni kayıt yok.")
 
     except Exception as e:
         print("Hata:", e)
-
 
 if __name__ == "__main__":
     main()

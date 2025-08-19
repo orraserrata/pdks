@@ -46,6 +46,7 @@ export default function AdminPanel() {
     bitis: format(today, "yyyy-MM-dd"),
   });
 
+
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ giris: "", cikis: "" });
   const [saving, setSaving] = useState(false);
@@ -63,6 +64,7 @@ export default function AdminPanel() {
       const { data } = await supabase
         .from("personel")
         .select("kullanici_id, isim, soyisim")
+        .eq("aktif", true)  // Sadece aktif personeller
         .order("kullanici_id", { ascending: true });
       setPersoneller(data || []);
     }

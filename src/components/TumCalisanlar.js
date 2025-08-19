@@ -9,14 +9,25 @@ function TumCalisanlar() {
   const [baslangic, setBaslangic] = useState(format(new Date(), "yyyy-MM-dd"));
   const [bitis, setBitis] = useState(format(new Date(), "yyyy-MM-dd"));
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("active"); // "all", "active", "inactive"
   const dayStartHour = 5;
 
   useEffect(() => {
     async function fetchPersoneller() {
-      const { data, error } = await supabase
+      let query = supabase
         .from('personel')
-        .select('kullanici_id, isim, soyisim')
+        .select('kullanici_id, isim, soyisim, aktif')
         .order('isim', { ascending: true });
+      
+      // Filtreleme uygula
+      if (filter === "active") {
+        query = query.eq('aktif', true);
+      } else if (filter === "inactive") {
+        query = query.eq('aktif', false);
+      }
+      // "all" için filtre uygulanmaz, tüm personeller gelir
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Veri çekme hatası:', error);
@@ -28,7 +39,7 @@ function TumCalisanlar() {
     }
 
     fetchPersoneller();
-  }, []);
+  }, [filter]);
 
   useEffect(() => {
     async function fetchCalisanDetaylari() {
@@ -99,15 +110,16 @@ function TumCalisanlar() {
             </div>
           </div>
           <table>
-            <thead>
-              <tr>
-                <th>Sıra</th>
-                <th>Ad Soyad</th>
-                <th>Kullanıcı ID</th>
-                <th>Toplam Süre (Saat)</th>
-                <th>Kayıt Sayısı</th>
-              </tr>
-            </thead>
+                    <thead>
+          <tr>
+            <th>Sıra</th>
+            <th>Ad Soyad</th>
+            <th>Kullanıcı ID</th>
+            <th>Durum</th>
+            <th>Toplam Süre (Saat)</th>
+            <th>Kayıt Sayısı</th>
+          </tr>
+        </thead>
             <tbody>
               ${personeller.map((calisan, index) => {
                 const detay = calisanDetaylari[calisan.kullanici_id] || { toplamSure: "0.00", kayitSayisi: 0 };
@@ -116,6 +128,7 @@ function TumCalisanlar() {
                     <td>${index + 1}</td>
                     <td>${(calisan.isim || "")} ${(calisan.soyisim || "")}</td>
                     <td>${calisan.kullanici_id}</td>
+                    <td>${calisan.aktif ? "Aktif" : "Pasif"}</td>
                     <td>${detay.toplamSure}</td>
                     <td>${detay.kayitSayisi}</td>
                   </tr>
@@ -141,6 +154,65 @@ function TumCalisanlar() {
     <div>
       <h2>Tüm Çalışanlar Raporu</h2>
       
+      {/* Filtreleme Butonları */}
+      <div style={{
+        display: "flex",
+        gap: "8px",
+        marginBottom: "12px",
+        alignItems: "center",
+        flexWrap: "wrap"
+      }}>
+        <span style={{ fontSize: "14px", fontWeight: "500", color: "#374151" }}>Personel Durumu:</span>
+        <button
+          onClick={() => setFilter("active")}
+          style={{
+            padding: "6px 12px",
+            fontSize: "13px",
+            backgroundColor: filter === "active" ? "#10b981" : "#f3f4f6",
+            color: filter === "active" ? "white" : "#374151",
+            border: "1px solid #d1d5db",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontWeight: "500",
+            transition: "all 0.2s"
+          }}
+        >
+          Aktif
+        </button>
+        <button
+          onClick={() => setFilter("inactive")}
+          style={{
+            padding: "6px 12px",
+            fontSize: "13px",
+            backgroundColor: filter === "inactive" ? "#f59e0b" : "#f3f4f6",
+            color: filter === "inactive" ? "white" : "#374151",
+            border: "1px solid #d1d5db",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontWeight: "500",
+            transition: "all 0.2s"
+          }}
+        >
+          Pasif
+        </button>
+        <button
+          onClick={() => setFilter("all")}
+          style={{
+            padding: "6px 12px",
+            fontSize: "13px",
+            backgroundColor: filter === "all" ? "#3b82f6" : "#f3f4f6",
+            color: filter === "all" ? "white" : "#374151",
+            border: "1px solid #d1d5db",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontWeight: "500",
+            transition: "all 0.2s"
+          }}
+        >
+          Tümü
+        </button>
+      </div>
+
       <div style={{ marginBottom: "20px" }}>
         <label>
           Başlangıç:
@@ -182,6 +254,7 @@ function TumCalisanlar() {
             <th>Sıra</th>
             <th>Ad Soyad</th>
             <th>Kullanıcı ID</th>
+            <th>Durum</th>
             <th>Toplam Süre (Saat)</th>
             <th>Kayıt Sayısı</th>
           </tr>
@@ -194,6 +267,18 @@ function TumCalisanlar() {
                 <td>{index + 1}</td>
                 <td>{(calisan.isim || "")} {(calisan.soyisim || "")}</td>
                 <td>{calisan.kullanici_id}</td>
+                <td>
+                  <span style={{
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    fontSize: "12px",
+                    fontWeight: "500",
+                    backgroundColor: calisan.aktif ? "#dcfce7" : "#fee2e2",
+                    color: calisan.aktif ? "#166534" : "#dc2626"
+                  }}>
+                    {calisan.aktif ? "Aktif" : "Pasif"}
+                  </span>
+                </td>
                 <td>{detay.toplamSure}</td>
                 <td>{detay.kayitSayisi}</td>
               </tr>
@@ -202,7 +287,7 @@ function TumCalisanlar() {
         </tbody>
         <tfoot>
           <tr>
-            <td colSpan="2" style={{ textAlign: "right", fontWeight: "bold" }}>
+            <td colSpan="3" style={{ textAlign: "right", fontWeight: "bold" }}>
               Toplam Çalışan:
             </td>
             <td>{personeller.length}</td>
