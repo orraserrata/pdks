@@ -1,0 +1,11 @@
+node_modules/ 
+backups/ 
+*.log 
+sync.log 
+sync (2).log 
+.env* 
+*.sql 
+*.py 
+BACKUP_README.md 
+HAFTALIK_TEMIZLEME_README.md 
+SERVIS_KURULUM.md
