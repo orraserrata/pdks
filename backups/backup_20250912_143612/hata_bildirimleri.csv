@@ -1,0 +1,19 @@
+﻿id,kullanici_id,calisan_adi,tarih,giris_saati,cikis_saati,hata_tipi,aciklama,bildirim_tarihi,durum,cozum_notu,cozum_tarihi
+4,14,AYŞENUR YAŞIN,2025-08-15,-,Devamsız,diger,s,2025-08-15T11:55:56.739+00:00,reddedildi,s,2025-08-15T12:00:42.267+00:00
+3,3,YİĞİTHAN BADEM,2025-08-15,-,Devamsız,diger,deneme,2025-08-15T11:54:08.916+00:00,cozuldu,,2025-08-15T12:00:56.681+00:00
+1,14,AYŞENUR YAŞIN,2025-08-15,-,Devamsız,diger,slm,2025-08-15T11:46:13+00:00,reddedildi,,2025-08-15T12:01:07.985+00:00
+5,25,Birgul,2025-08-15,-,Devamsız,yanlis_cikis,denemee,2025-08-15T12:54:26.143+00:00,cozuldu,tmm,2025-08-15T12:54:46.529+00:00
+6,2,Umut Gedikli,2025-08-19,09:09,-,yanlis_giris,s,2025-08-19T09:59:42.815+00:00,reddedildi,2,2025-08-19T10:00:11.934+00:00
+7,2,Umut Gedikli,2025-08-19,09:09,-,yanlis_cikis,2,2025-08-19T10:00:19.536+00:00,reddedildi,s,2025-08-19T10:01:49.604+00:00
+8,61,EMİNE ÇAKMAK,2025-08-19,-,Devamsız,diger,kesla,2025-08-19T10:46:47.96+00:00,cozuldu,tm,2025-08-19T10:47:26.848+00:00
+9,12,GİZEM YILDIZ,2025-08-19,11:58,-,yanlis_giris,Deneme 12,2025-08-19T11:17:56.33+00:00,reddedildi,,2025-08-20T16:37:28.008+00:00
+10,12,GİZEM YILDIZ,2025-08-20,12:06,-,fazla_mesai,Yağmurdan dolayı  çok ıslandığım için üstümü değiştirmeye eve gittim 12.40 gibi falan buradan çıktım 2 de işe geri döndüm,2025-08-20T12:56:27.141+00:00,cozuldu,,2025-08-20T16:37:35.157+00:00
+12,24,İSMAİL USTAOĞLU,2025-08-22,-,Devamsız,eksik_giris,Giriş çıkış eksik gün saatim sistemde yok,2025-08-23T11:00:10.371+00:00,cozuldu,,2025-08-24T15:29:09.688+00:00
+11,57,Serhat,2025-08-20,00:05,-,eksik_giris,Sanırım girerken yüzümü okutmadım 2 de girdim,2025-08-23T09:58:13.574+00:00,cozuldu,,2025-08-24T15:29:11.207+00:00
+13,35,FATMANUR USTAOĞLU,2025-08-20,08:07,15:33,yanlis_giris,Dkalgls,2025-08-24T15:56:41.893+00:00,reddedildi,,2025-08-27T07:21:39.428+00:00
+14,51,MUHAMMED NUR NASR,2025-08-24,21:12,-,yanlis_giris,Giris 11:12 civarı çıkış ise 21:12,2025-08-24T20:25:24.687+00:00,cozuldu,,2025-08-27T07:22:18.844+00:00
+15,5,YAKUP ONUR UZUN,2025-08-24,17:16,-,eksik_giris,sabah 8 de geldim,2025-08-24T20:28:38.849+00:00,cozuldu,,2025-08-27T07:22:32.826+00:00
+16,35,FATMANUR USTAOĞLU,2025-08-24,-,Devamsız,yanlis_giris,11.00 -00.30 arası çalıştım,2025-08-25T11:46:38.536+00:00,cozuldu,,2025-08-27T07:22:57.494+00:00
+17,5,YAKUP ONUR UZUN,2025-08-26,19:59,-,eksik_cikis,Antre yaptım akşam 8 giriş kapanış,2025-08-26T21:25:31.176+00:00,cozuldu,,2025-08-27T07:23:36.156+00:00
+18,45,MAHMUT EREN UZUN,2025-08-26,17:05,-,eksik_cikis,Çıkış gözükmüyo,2025-08-26T21:35:34.089+00:00,cozuldu,,2025-08-27T07:23:57.638+00:00
+19,35,FATMANUR USTAOĞLU,2025-09-07,16:20,-,eksik_cikis,Saat görünmüyor,2025-09-12T08:18:04.787+00:00,inceleniyor,,

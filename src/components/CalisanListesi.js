@@ -4,7 +4,6 @@ import { supabase } from "../supabaseClient";
 
 export default function CalisanListesi({ personeller, onCalisanSelect, session }) {
   const [filter, setFilter] = useState("active"); // "all", "active", "inactive"
-  const [userInput, setUserInput] = useState("");
   const [userProfile, setUserProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState("");
@@ -180,59 +179,77 @@ export default function CalisanListesi({ personeller, onCalisanSelect, session }
         </div>
       ) : (
         <>
-          {/* Admin olmayan kullanıcılar için ID girişi */}
-          {!userProfile.is_admin && (
+          {/* Direkt saatleri göster */}
+          {userProfile.is_admin ? (
+            // Admin kullanıcılar tüm çalışanları görebilir
+            <div>
+              <div style={{
+                display: "flex",
+                gap: "8px",
+                marginBottom: "12px",
+                alignItems: "center",
+                flexWrap: "wrap"
+              }}>
+                <span style={{ fontSize: "14px", fontWeight: "500", color: "#374151" }}>Filtre:</span>
+                <button
+                  onClick={() => setFilter("active")}
+                  style={{
+                    padding: "6px 12px",
+                    backgroundColor: filter === "active" ? "#3b82f6" : "#e5e7eb",
+                    color: filter === "active" ? "white" : "#374151",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "14px",
+                    cursor: "pointer"
+                  }}
+                >
+                  Aktif
+                </button>
+                <button
+                  onClick={() => setFilter("inactive")}
+                  style={{
+                    padding: "6px 12px",
+                    backgroundColor: filter === "inactive" ? "#3b82f6" : "#e5e7eb",
+                    color: filter === "inactive" ? "white" : "#374151",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "14px",
+                    cursor: "pointer"
+                  }}
+                >
+                  Pasif
+                </button>
+                <button
+                  onClick={() => setFilter("all")}
+                  style={{
+                    padding: "6px 12px",
+                    backgroundColor: filter === "all" ? "#3b82f6" : "#e5e7eb",
+                    color: filter === "all" ? "white" : "#374151",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "14px",
+                    cursor: "pointer"
+                  }}
+                >
+                  Tümü
+                </button>
+              </div>
+            </div>
+          ) : (
+            // Normal kullanıcılar sadece kendi saatlerini görebilir
             <div style={{
-              display: "flex",
-              gap: "8px",
-              marginBottom: "12px",
-              alignItems: "center",
-              flexWrap: "wrap"
+              padding: "12px",
+              backgroundColor: "#f0f9ff",
+              border: "1px solid #0ea5e9",
+              borderRadius: "6px",
+              marginBottom: "12px"
             }}>
-              <span style={{ fontSize: "14px", fontWeight: "500", color: "#374151" }}>Kullanıcı ID:</span>
-              <input
-                type="number"
-                placeholder="Kullanıcı ID'nizi girin"
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                style={{
-                  padding: "6px 12px",
-                  fontSize: "13px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "6px",
-                  width: "150px"
-                }}
-              />
-              <button
-                onClick={() => {
-                  if (userInput.trim()) {
-                    const user = personeller.find(p => p.kullanici_id === parseInt(userInput));
-                    if (user) {
-                      // Admin olmayan kullanıcılar sadece kendi ID'sini görebilir
-                      if (parseInt(userInput) !== userProfile.kullanici_id) {
-                        alert("Sadece kendi kullanıcı ID'nizi görüntüleyebilirsiniz!");
-                        return;
-                      }
-                      onCalisanSelect(user);
-                    } else {
-                      alert("Bu ID'ye sahip personel bulunamadı!");
-                    }
-                  }
-                }}
-                style={{
-                  padding: "6px 12px",
-                  fontSize: "13px",
-                  backgroundColor: "#3b82f6",
-                  color: "white",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                  transition: "all 0.2s"
-                }}
-              >
-                Görüntüle
-              </button>
+              <div style={{ fontSize: "14px", color: "#0c4a6e", fontWeight: "500", marginBottom: "4px" }}>
+                👤 Kendi Saatleriniz
+              </div>
+              <div style={{ fontSize: "13px", color: "#0c4a6e" }}>
+                Sadece kendi çalışma saatlerinizi görüntüleyebilirsiniz.
+              </div>
             </div>
           )}
 
@@ -312,6 +329,55 @@ export default function CalisanListesi({ personeller, onCalisanSelect, session }
               >
                 Tümü
               </button>
+            </div>
+          )}
+
+          {/* Normal kullanıcılar için direkt kendi saatlerini göster */}
+          {!userProfile.is_admin && (
+            <div style={{ 
+              marginTop: "12px",
+              padding: "12px",
+              backgroundColor: "#f9fafb",
+              borderRadius: "8px",
+              border: "1px solid #e5e7eb"
+            }}>
+              <h3 style={{ margin: "0 0 8px 0", fontSize: "14px", color: "#374151" }}>
+                Kendi Saatleriniz
+              </h3>
+              {(() => {
+                const kendiPersonel = personeller.find(p => p.kullanici_id === userProfile.kullanici_id);
+                if (kendiPersonel) {
+                  return (
+                    <button
+                      type="button"
+                      className="personRow"
+                      onClick={() => onCalisanSelect(kendiPersonel)}
+                      style={{
+                        position: "relative",
+                        opacity: kendiPersonel.aktif === false ? 0.7 : 1
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                        <span>{kendiPersonel.isim || `ID: ${kendiPersonel.kullanici_id}`} {kendiPersonel.soyisim || ""}</span>
+                        {kendiPersonel.aktif === false && (
+                          <span style={{
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            fontSize: "10px",
+                            fontWeight: "500",
+                            backgroundColor: "#fee2e2",
+                            color: "#dc2626"
+                          }}>
+                            Pasif
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                } else {
+                  return <div>Kendi personel kaydınız bulunamadı.</div>;
+                }
+              })()}
             </div>
           )}
 

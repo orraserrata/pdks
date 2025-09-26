@@ -13,6 +13,8 @@ import HesapOlustur from "./components/HesapOlustur";
 import GirisYap from "./components/GirisYap";
 import Modal from "./components/Modal";
 import ErrorBoundary from "./components/ErrorBoundary";
+import MaasHesabi from "./components/MaasHesabi";
+import Maasim from "./components/Maasim";
 
 function App() {
   const [personeller, setPersoneller] = useState([]);
@@ -184,8 +186,24 @@ function App() {
                   >
                     Tüm Çalışanlar
                   </button>
+                  <button
+                    className={`tab ${activeTab === 'maasHesabi' ? 'tab-active' : ''}`}
+                    onClick={() => setActiveTab('maasHesabi')}
+                  >
+                    Maaş Hesabı
+                  </button>
                   <button className={`tab ${activeTab === 'admin' ? 'tab-active' : ''}`} onClick={() => setActiveTab('admin')}>Admin</button>
                 </>
+              )}
+              
+              {/* Maaşım - sadece normal kullanıcılar görebilir */}
+              {!userProfile?.is_admin && (
+                <button 
+                  className={`tab ${activeTab === 'maasim' ? 'tab-active' : ''}`} 
+                  onClick={() => setActiveTab('maasim')}
+                >
+                  Maaşım
+                </button>
               )}
               
               {/* Hata Bildirimleri - hem normal kullanıcılar hem admin kullanıcılar görebilir */}
@@ -253,6 +271,14 @@ function App() {
         ) : activeTab === 'hataBildirimleri' ? (
           <div className="card">
             <HataBildirimleriListesi />
+          </div>
+        ) : activeTab === 'maasHesabi' && userProfile?.is_admin ? (
+          <div className="card">
+            <MaasHesabi />
+          </div>
+        ) : activeTab === 'maasim' && !userProfile?.is_admin ? (
+          <div className="card">
+            <Maasim session={session} userProfile={userProfile} />
           </div>
         ) : (
           <div className="layout">

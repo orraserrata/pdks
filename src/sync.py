@@ -23,6 +23,7 @@ if not SUPABASE_SERVICE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
+
 def record_exists(table, user_id, timestamp):
     """Belirli kayıt var mı kontrol et"""
     result = supabase.table(table).select("*").eq("kullanici_id", user_id).eq("giris_tarihi", timestamp).execute()
@@ -53,12 +54,21 @@ def save_to_supabase(records):
             "verify_method": rec.get("verify_method"),
         }
 
-        response = supabase.table("personel_giris_cikis").insert(record).execute()
-        err = getattr(response, 'error', None)
-        if err:
-            print("Hata supabase insert:", err)
-        else:
-            print(f"Ham kayıt eklendi: {record}")
+        try:
+            response = supabase.table("personel_giris_cikis").insert(record).execute()
+            err = getattr(response, 'error', None)
+            if err:
+                if "duplicate key" in str(err).lower():
+                    print(f"Duplicate key hatası, kayıt zaten var: {user_id} - {timestamp}")
+                else:
+                    print("Hata supabase insert:", err)
+            else:
+                print(f"Ham kayıt eklendi: {record}")
+        except Exception as e:
+            if "duplicate key" in str(e).lower():
+                print(f"Duplicate key hatası, kayıt zaten var: {user_id} - {timestamp}")
+            else:
+                print(f"Beklenmeyen hata: {e}")
 
 def get_raw_attendance():
     """Ham tabloyu al"""
@@ -321,6 +331,19 @@ def main():
                     print(f"Çıkış tespit edildi: {a.user_id} - {a.timestamp}")
                 elif punch_info == 0:
                     print(f"Giriş tespit edildi: {a.user_id} - {a.timestamp}")
+            else:
+                # Punch bilgisi yoksa, zaman aralığına göre tahmin et
+                hour = a.timestamp.hour
+                if 6 <= hour <= 12:  # Sabah 6-12 arası muhtemelen giriş
+                    is_entry = True
+                    print(f"Sabah giriş tahmin edildi: {a.user_id} - {a.timestamp}")
+                elif 16 <= hour <= 23:  # Akşam 16-23 arası muhtemelen çıkış
+                    is_entry = False
+                    print(f"Akşam çıkış tahmin edildi: {a.user_id} - {a.timestamp}")
+                else:
+                    # Gece yarısı ve erken sabah için varsayılan giriş
+                    is_entry = True
+                    print(f"Gece/erken sabah giriş tahmin edildi: {a.user_id} - {a.timestamp}")
             
             attendance_records.append({
                 "user_id": a.user_id,
@@ -338,16 +361,24 @@ def main():
             ensure_personel(users, attendance)
 
         save_to_supabase(attendance_records)
+        
+        # Cihazdaki verileri temizle (her sync'te)
+        if os.getenv("SYNC_CLEAR_DEVICE_DATA", "false").lower() == "true":
+            try:
+                print("🧹 Cihazdaki veriler temizleniyor...")
+                # Cihazdaki tüm attendance verilerini sil
+                conn.clear_attendance()
+                print("✅ Cihazdaki veriler başarıyla temizlendi")
+            except Exception as clear_error:
+                print(f"⚠️ Cihaz temizleme hatası: {clear_error}")
+                print("Veriler Supabase'de güvende, devam ediliyor...")
+        else:
+            print("ℹ️ Cihaz temizleme kapalı (SYNC_CLEAR_DEVICE_DATA=false)")
+        
         conn.disconnect()
 
-        # Sadece yeni ham veriyi alıp düzenle
-        new_raw_data = get_new_raw_attendance()
-        if new_raw_data:
-            pairs = generate_pairs(new_raw_data)
-            save_pairs(pairs)
-            print(f"Yeni kayıtlar işlendi - {len(pairs)} çift oluşturuldu")
-        else:
-            print("İşlenecek yeni kayıt yok.")
+        # Trigger otomatik olarak çalışacak, manuel işleme gerek yok
+        print("Ham veriler kaydedildi. Trigger otomatik olarak giriş-çıkış çiftlerini oluşturacak.")
 
     except Exception as e:
         print("Hata:", e)
