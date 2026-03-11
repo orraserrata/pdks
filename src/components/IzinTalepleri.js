@@ -30,6 +30,7 @@ export default function IzinTalepleri() {
   const [summaryData, setSummaryData] = useState([]);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [personelList, setPersonelList] = useState([]);
+  const [personelFilter, setPersonelFilter] = useState("aktif"); // aktif, pasif, tumu
 
   const izinTipleri = [
     { value: "ucretsiz_izin", label: "Ücretsiz İzin" },
@@ -963,20 +964,43 @@ export default function IzinTalepleri() {
             <h3 style={{ margin: 0, fontSize: "18px", color: "#166534", fontWeight: "700" }}>
               📊 Yıllık İzin Özet Tablosu
             </h3>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151" }}>Yıl:</label>
-              <select
-                value={summaryYear}
-                onChange={(e) => setSummaryYear(parseInt(e.target.value))}
-                style={{
-                  padding: "6px 12px", border: "1px solid #16a34a",
-                  borderRadius: "6px", fontSize: "14px", backgroundColor: "white",
-                }}
-              >
-                {summaryYears.map((y) => (
-                  <option key={y} value={y}>{y}</option>
+            <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                {[
+                  { value: "aktif", label: "Aktif" },
+                  { value: "pasif", label: "Pasif" },
+                  { value: "tumu", label: "Tümü" },
+                ].map((f) => (
+                  <button
+                    key={f.value}
+                    onClick={() => setPersonelFilter(f.value)}
+                    style={{
+                      padding: "6px 12px", fontSize: "13px",
+                      backgroundColor: personelFilter === f.value ? "#16a34a" : "#f3f4f6",
+                      color: personelFilter === f.value ? "white" : "#374151",
+                      border: "1px solid #d1d5db", borderRadius: "6px",
+                      cursor: "pointer", fontWeight: "500", transition: "all 0.2s",
+                    }}
+                  >
+                    {f.label}
+                  </button>
                 ))}
-              </select>
+              </div>
+              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151" }}>Yıl:</label>
+                <select
+                  value={summaryYear}
+                  onChange={(e) => setSummaryYear(parseInt(e.target.value))}
+                  style={{
+                    padding: "6px 12px", border: "1px solid #16a34a",
+                    borderRadius: "6px", fontSize: "14px", backgroundColor: "white",
+                  }}
+                >
+                  {summaryYears.map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -1007,7 +1031,11 @@ export default function IzinTalepleri() {
                   </tr>
                 </thead>
                 <tbody>
-                  {summaryRows.map((row) => (
+                  {summaryRows.filter((row) => {
+                    if (personelFilter === "aktif") return row.aktif !== false;
+                    if (personelFilter === "pasif") return row.aktif === false;
+                    return true;
+                  }).map((row) => (
                     <tr key={row.kullanici_id}>
                       <td style={{
                         padding: "8px 12px", fontWeight: "700", textAlign: "center",
