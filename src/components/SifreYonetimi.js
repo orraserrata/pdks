@@ -18,7 +18,7 @@ const SifreYonetimi = () => {
     try {
       // Şifre sıfırlama emaili gönder
       const { error } = await supabase.auth.resetPasswordForEmail(selectedUser, {
-        redirectTo: window.location.origin + '/reset-password'
+        redirectTo: window.location.origin
       });
 
       if (error) throw error;

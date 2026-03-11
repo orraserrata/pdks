@@ -28,6 +28,12 @@ function App() {
   const [session, setSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [passwordResetLoading, setPasswordResetLoading] = useState(false);
+  const [passwordResetError, setPasswordResetError] = useState('');
+  const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
 
   async function fetchPersoneller() {
     const { data, error } = await supabase
@@ -149,16 +155,145 @@ function App() {
       } else if (event === 'INITIAL_SESSION') {
         console.log('İlk session yüklendi');
         setSession(session);
+      } else if (event === 'PASSWORD_RECOVERY') {
+        console.log('Şifre sıfırlama modu');
+        setSession(session);
+        setShowPasswordReset(true);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  async function handlePasswordUpdate(e) {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      setPasswordResetError('Şifre en az 6 karakter olmalıdır.');
+      return;
+    }
+    if (newPassword !== newPasswordConfirm) {
+      setPasswordResetError('Şifreler eşleşmiyor.');
+      return;
+    }
+
+    setPasswordResetLoading(true);
+    setPasswordResetError('');
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        setPasswordResetError(error.message);
+      } else {
+        setPasswordResetSuccess(true);
+        setNewPassword('');
+        setNewPasswordConfirm('');
+        setTimeout(() => {
+          setShowPasswordReset(false);
+          setPasswordResetSuccess(false);
+          // URL'deki hash parametrelerini temizle
+          window.history.replaceState(null, '', window.location.pathname);
+        }, 2000);
+      }
+    } catch (err) {
+      setPasswordResetError(String(err.message || err));
+    } finally {
+      setPasswordResetLoading(false);
+    }
+  }
+
   if (loading) return <div className="container">Yükleniyor...</div>;
 
   return (
     <ErrorBoundary>
+      {/* Şifre Sıfırlama Modal */}
+      {showPasswordReset && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '12px', padding: '32px',
+            maxWidth: '400px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          }}>
+            <h2 style={{ marginBottom: '20px', textAlign: 'center', color: '#374151' }}>
+              Yeni Şifre Belirle
+            </h2>
+
+            {passwordResetSuccess ? (
+              <div style={{
+                padding: '16px', backgroundColor: '#dcfce7',
+                border: '1px solid #10b981', borderRadius: '8px',
+                textAlign: 'center', color: '#166534', fontSize: '14px',
+              }}>
+                ✅ Şifreniz başarıyla güncellendi! Yönlendiriliyorsunuz...
+              </div>
+            ) : (
+              <form onSubmit={handlePasswordUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                    Yeni Şifre *
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    placeholder="En az 6 karakter"
+                    style={{
+                      width: '100%', padding: '10px 12px',
+                      border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                    Yeni Şifre (Tekrar) *
+                  </label>
+                  <input
+                    type="password"
+                    value={newPasswordConfirm}
+                    onChange={(e) => setNewPasswordConfirm(e.target.value)}
+                    required
+                    minLength={6}
+                    placeholder="Şifreyi tekrar girin"
+                    style={{
+                      width: '100%', padding: '10px 12px',
+                      border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px',
+                    }}
+                  />
+                </div>
+
+                {passwordResetError && (
+                  <div style={{
+                    padding: '8px 12px', backgroundColor: '#fee2e2',
+                    border: '1px solid #fecaca', borderRadius: '6px',
+                    color: '#dc2626', fontSize: '14px',
+                  }}>
+                    {passwordResetError}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={passwordResetLoading}
+                  style={{
+                    padding: '12px', backgroundColor: passwordResetLoading ? '#9ca3af' : '#3b82f6',
+                    color: 'white', border: 'none', borderRadius: '6px',
+                    fontSize: '14px', fontWeight: '500',
+                    cursor: passwordResetLoading ? 'not-allowed' : 'pointer',
+                    transition: 'background-color 0.2s',
+                  }}
+                >
+                  {passwordResetLoading ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="App container">
         <div className="toolbar">
           <div className="toolbar-left">
