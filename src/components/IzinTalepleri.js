@@ -11,6 +11,9 @@ export default function IzinTalepleri() {
   const [session, setSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
 
+  // Alt sekme: 'talepler' veya 'ozet'
+  const [activeSubTab, setActiveSubTab] = useState("talepler");
+
   // Form state
   const [formBaslangic, setFormBaslangic] = useState("");
   const [formBitis, setFormBitis] = useState("");
@@ -18,6 +21,9 @@ export default function IzinTalepleri() {
   const [formAciklama, setFormAciklama] = useState("");
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
+
+  // Toplu işlem state
+  const [selectedIds, setSelectedIds] = useState([]);
 
   // Yıllık özet tablosu state
   const [summaryYear, setSummaryYear] = useState(new Date().getFullYear());
@@ -118,7 +124,6 @@ export default function IzinTalepleri() {
         .select("*")
         .order("talep_tarihi", { ascending: false });
 
-      // Normal kullanıcı sadece kendi taleplerini görebilir
       if (!userProfile?.is_admin) {
         query = query.eq("kullanici_id", userProfile.kullanici_id);
       }
@@ -150,8 +155,8 @@ export default function IzinTalepleri() {
       return;
     }
 
-    if (formBitis < formBaslangic) {
-      setFormError("Bitiş tarihi başlangıç tarihinden önce olamaz.");
+    if (formBitis <= formBaslangic) {
+      setFormError("Bitiş tarihi başlangıç tarihinden sonra olmalıdır.");
       return;
     }
 
@@ -198,7 +203,7 @@ export default function IzinTalepleri() {
 
       if (yeniDurum === "reddedildi") {
         const not = prompt("Red nedeni:");
-        if (not === null) return; // İptal edildi
+        if (not === null) return;
         updateData.admin_notu = not;
       }
 
@@ -217,12 +222,68 @@ export default function IzinTalepleri() {
         alert(updateError.message || "Durum güncellenemedi");
       } else {
         loadTalepler();
+        if (userProfile?.is_admin) loadSummaryData();
       }
     } catch (err) {
       alert(String(err.message || err));
     }
   }
 
+  // ---- Toplu işlem fonksiyonları ----
+  async function bulkUpdateDurum(yeniDurum) {
+    if (selectedIds.length === 0) {
+      alert("Lütfen en az bir talep seçin.");
+      return;
+    }
+
+    let not = null;
+    if (yeniDurum === "reddedildi") {
+      not = prompt("Seçili " + selectedIds.length + " talep için red nedeni:");
+      if (not === null) return;
+    } else if (yeniDurum === "onaylandi") {
+      not = prompt("Seçili " + selectedIds.length + " talep için onay notu (opsiyonel):");
+      if (not === null) return;
+    }
+
+    try {
+      const updateData = {
+        durum: yeniDurum,
+        karar_tarihi: new Date().toISOString(),
+      };
+      if (not) updateData.admin_notu = not;
+
+      const { error: updateError } = await supabase
+        .from("izin_talepleri")
+        .update(updateData)
+        .in("id", selectedIds);
+
+      if (updateError) {
+        alert(updateError.message || "Toplu güncelleme başarısız");
+      } else {
+        setSelectedIds([]);
+        loadTalepler();
+        loadSummaryData();
+      }
+    } catch (err) {
+      alert(String(err.message || err));
+    }
+  }
+
+  function toggleSelect(id) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.length === talepler.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(talepler.map((t) => t.id));
+    }
+  }
+
+  // ---- Özet tablosu fonksiyonları ----
   async function loadPersonelList() {
     try {
       const { data } = await supabase
@@ -259,15 +320,17 @@ export default function IzinTalepleri() {
     }
   }
 
-  // Ay bazlı gün sayısı hesaplama
+  // Bitiş tarihi eksklüsif: 4→5 = 1 gün (sadece 4. gün izinli)
   function calculateDaysInMonth(baslangic, bitis, year, month) {
     const monthStart = new Date(year, month - 1, 1);
     const monthEnd = new Date(year, month, 0); // Ayın son günü
     const izinStart = new Date(baslangic);
-    const izinEnd = new Date(bitis);
+    // Bitiş eksklüsif: son izin günü = bitis - 1
+    const izinLastDay = new Date(bitis);
+    izinLastDay.setDate(izinLastDay.getDate() - 1);
 
     const effectiveStart = izinStart > monthStart ? izinStart : monthStart;
-    const effectiveEnd = izinEnd < monthEnd ? izinEnd : monthEnd;
+    const effectiveEnd = izinLastDay < monthEnd ? izinLastDay : monthEnd;
 
     if (effectiveStart > effectiveEnd) return 0;
     return differenceInCalendarDays(effectiveEnd, effectiveStart) + 1;
@@ -338,10 +401,26 @@ export default function IzinTalepleri() {
 
   function renderCellContent(m) {
     const parts = [];
-    if (m.yillik > 0) parts.push(String(m.yillik));
+    if (m.yillik > 0) parts.push(m.yillik + "(YILLIK)");
     if (m.raporlu > 0) parts.push(m.raporlu + "(RAPOR)");
     if (m.ucretsiz > 0) parts.push(m.ucretsiz + "(ÜCRETSİZ)");
     return parts.length > 0 ? parts.join(" ") : "";
+  }
+
+  // Başlangıç tarihi seçilince bitiş min değerini hesapla
+  function getMinBitis() {
+    if (!formBaslangic) return "";
+    const d = new Date(formBaslangic);
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split("T")[0];
+  }
+
+  // İzin gün sayısını göster (bitiş eksklüsif)
+  function getIzinGunSayisi() {
+    if (!formBaslangic || !formBitis) return null;
+    const days = differenceInCalendarDays(new Date(formBitis), new Date(formBaslangic));
+    if (days <= 0) return null;
+    return days;
   }
 
   // Giriş yapılmamışsa uyarı göster
@@ -387,6 +466,8 @@ export default function IzinTalepleri() {
       </div>
     );
   }
+
+  const izinGunSayisi = getIzinGunSayisi();
 
   return (
     <div>
@@ -435,7 +516,13 @@ export default function IzinTalepleri() {
                 <input
                   type="date"
                   value={formBaslangic}
-                  onChange={(e) => setFormBaslangic(e.target.value)}
+                  onChange={(e) => {
+                    setFormBaslangic(e.target.value);
+                    // Bitiş tarihi başlangıçtan küçük veya eşitse temizle
+                    if (formBitis && formBitis <= e.target.value) {
+                      setFormBitis("");
+                    }
+                  }}
                   required
                   style={{
                     padding: "8px 12px",
@@ -448,11 +535,19 @@ export default function IzinTalepleri() {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151" }}>Bitiş Tarihi *</label>
+                <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151" }}>
+                  Bitiş Tarihi *
+                  {izinGunSayisi && (
+                    <span style={{ fontWeight: "400", color: "#6b7280", marginLeft: "6px" }}>
+                      ({izinGunSayisi} gün)
+                    </span>
+                  )}
+                </label>
                 <input
                   type="date"
                   value={formBitis}
                   onChange={(e) => setFormBitis(e.target.value)}
+                  min={getMinBitis()}
                   required
                   style={{
                     padding: "8px 12px",
@@ -513,226 +608,354 @@ export default function IzinTalepleri() {
         </div>
       )}
 
-      {/* Filtre */}
-      <div style={{ marginBottom: "16px", display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-        <span style={{ fontSize: "14px", fontWeight: "500", color: "#374151" }}>Durum:</span>
-        {[
-          { value: "tumu", label: "Tümü", color: "#3b82f6" },
-          { value: "beklemede", label: "Beklemede", color: "#f59e0b" },
-          { value: "onaylandi", label: "Onaylandı", color: "#10b981" },
-          { value: "reddedildi", label: "Reddedildi", color: "#ef4444" },
-        ].map((f) => (
+      {/* Alt Sekme Butonları */}
+      {userProfile.is_admin && (
+        <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
           <button
-            key={f.value}
-            onClick={() => setFilter(f.value)}
+            onClick={() => setActiveSubTab("talepler")}
             style={{
-              padding: "6px 12px",
-              fontSize: "13px",
-              backgroundColor: filter === f.value ? f.color : "#f3f4f6",
-              color: filter === f.value ? "white" : "#374151",
+              padding: "10px 20px",
+              fontSize: "14px",
+              fontWeight: "600",
+              backgroundColor: activeSubTab === "talepler" ? "#3b82f6" : "#f3f4f6",
+              color: activeSubTab === "talepler" ? "white" : "#374151",
               border: "1px solid #d1d5db",
-              borderRadius: "6px",
+              borderRadius: "8px",
               cursor: "pointer",
-              fontWeight: "500",
               transition: "all 0.2s",
             }}
           >
-            {f.label}
+            📋 İzin Talepleri
           </button>
-        ))}
-      </div>
-
-      {/* Admin bilgi */}
-      {userProfile.is_admin && (
-        <div style={{
-          padding: "12px",
-          backgroundColor: "#dcfce7",
-          border: "1px solid #10b981",
-          borderRadius: "6px",
-          marginBottom: "12px",
-        }}>
-          <div style={{ fontSize: "14px", color: "#166534", fontWeight: "500", marginBottom: "4px" }}>
-            👑 Admin Görünümü
-          </div>
-          <div style={{ fontSize: "13px", color: "#166534" }}>
-            Tüm çalışanların izin taleplerini görebilir, onaylayabilir veya reddedebilirsiniz.
-          </div>
+          <button
+            onClick={() => setActiveSubTab("ozet")}
+            style={{
+              padding: "10px 20px",
+              fontSize: "14px",
+              fontWeight: "600",
+              backgroundColor: activeSubTab === "ozet" ? "#16a34a" : "#f3f4f6",
+              color: activeSubTab === "ozet" ? "white" : "#374151",
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+          >
+            📊 Yıllık İzin Özet Tablosu
+          </button>
         </div>
       )}
 
-      {/* Talepler Tablosu */}
-      {loading ? (
-        <div>Yükleniyor...</div>
-      ) : error ? (
-        <div style={{ color: "red" }}>{error}</div>
-      ) : talepler.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}>
-          {filter === "tumu" ? "Henüz izin talebi yok." : `${getDurumLabel(filter)} durumunda talep yok.`}
-        </div>
-      ) : (
-        <div style={{
-          overflowX: "auto",
-          borderRadius: "8px",
-          border: "1px solid #e5e7eb",
-          boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
-        }}>
-          <table style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            backgroundColor: "white",
-            fontSize: "14px",
-          }}>
-            <thead>
-              <tr style={{ backgroundColor: "#f9fafb" }}>
-                {userProfile.is_admin && (
-                  <th style={{
-                    padding: "16px 12px", textAlign: "left", fontSize: "14px",
-                    fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
-                  }}>Çalışan</th>
-                )}
-                <th style={{
-                  padding: "16px 12px", textAlign: "left", fontSize: "14px",
-                  fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
-                }}>İzin Tipi</th>
-                <th style={{
-                  padding: "16px 12px", textAlign: "left", fontSize: "14px",
-                  fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
-                }}>Başlangıç</th>
-                <th style={{
-                  padding: "16px 12px", textAlign: "left", fontSize: "14px",
-                  fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
-                }}>Bitiş</th>
-                <th style={{
-                  padding: "16px 12px", textAlign: "left", fontSize: "14px",
-                  fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
-                }}>Açıklama</th>
-                <th style={{
-                  padding: "16px 12px", textAlign: "left", fontSize: "14px",
-                  fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
-                }}>Durum</th>
-                <th style={{
-                  padding: "16px 12px", textAlign: "left", fontSize: "14px",
-                  fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
-                }}>Talep Tarihi</th>
-                {userProfile.is_admin && (
-                  <th style={{
-                    padding: "16px 12px", textAlign: "left", fontSize: "14px",
-                    fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
-                  }}>İşlemler</th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {talepler.map((talep) => (
-                <tr key={talep.id} style={{
-                  borderBottom: "1px solid rgb(0, 0, 0)",
-                  transition: "background-color 0.2s",
-                }}>
-                  {userProfile.is_admin && (
-                    <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151" }}>
-                      <div>{talep.calisan_adi}</div>
-                      <div style={{ fontSize: "12px", color: "#6b7280" }}>ID: {talep.kullanici_id}</div>
-                    </td>
-                  )}
-                  <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151" }}>
-                    <span style={{
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                      fontSize: "12px",
-                      fontWeight: "500",
-                      backgroundColor: talep.izin_tipi === "yillik_izin" ? "#dbeafe" :
-                        talep.izin_tipi === "raporlu" ? "#fef3c7" : "#f3e8ff",
-                      color: talep.izin_tipi === "yillik_izin" ? "#1e40af" :
-                        talep.izin_tipi === "raporlu" ? "#92400e" : "#6b21a8",
-                    }}>
-                      {getIzinTipiLabel(talep.izin_tipi)}
-                    </span>
-                  </td>
-                  <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151" }}>
-                    {format(new Date(talep.baslangic_tarihi), "dd MMM yyyy", { locale: trLocale })}
-                  </td>
-                  <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151" }}>
-                    {format(new Date(talep.bitis_tarihi), "dd MMM yyyy", { locale: trLocale })}
-                  </td>
-                  <td style={{
-                    padding: "16px 12px", fontSize: "14px", color: "#374151", maxWidth: "200px",
-                  }}>
-                    <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                      {talep.aciklama || "-"}
-                    </div>
-                    {talep.admin_notu && (
-                      <div style={{
-                        marginTop: "8px", padding: "8px", backgroundColor: "#f0f9ff",
-                        borderRadius: "4px", fontSize: "12px", borderLeft: "3px solid #3b82f6",
+      {/* ========== İZİN TALEPLERİ BÖLÜMÜ ========== */}
+      {(activeSubTab === "talepler" || !userProfile.is_admin) && (
+        <div>
+          {/* Filtre */}
+          <div style={{ marginBottom: "16px", display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "14px", fontWeight: "500", color: "#374151" }}>Durum:</span>
+            {[
+              { value: "tumu", label: "Tümü", color: "#3b82f6" },
+              { value: "beklemede", label: "Beklemede", color: "#f59e0b" },
+              { value: "onaylandi", label: "Onaylandı", color: "#10b981" },
+              { value: "reddedildi", label: "Reddedildi", color: "#ef4444" },
+            ].map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value)}
+                style={{
+                  padding: "6px 12px",
+                  fontSize: "13px",
+                  backgroundColor: filter === f.value ? f.color : "#f3f4f6",
+                  color: filter === f.value ? "white" : "#374151",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontWeight: "500",
+                  transition: "all 0.2s",
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Admin bilgi */}
+          {userProfile.is_admin && (
+            <div style={{
+              padding: "12px",
+              backgroundColor: "#dcfce7",
+              border: "1px solid #10b981",
+              borderRadius: "6px",
+              marginBottom: "12px",
+            }}>
+              <div style={{ fontSize: "14px", color: "#166534", fontWeight: "500", marginBottom: "4px" }}>
+                👑 Admin Görünümü
+              </div>
+              <div style={{ fontSize: "13px", color: "#166534" }}>
+                Tüm çalışanların izin taleplerini görebilir, onaylayabilir veya reddedebilirsiniz.
+              </div>
+            </div>
+          )}
+
+          {/* Toplu İşlem Çubuğu - Admin */}
+          {userProfile.is_admin && selectedIds.length > 0 && (
+            <div style={{
+              marginBottom: "12px",
+              padding: "12px 16px",
+              backgroundColor: "#eff6ff",
+              border: "1px solid #3b82f6",
+              borderRadius: "8px",
+              display: "flex",
+              gap: "12px",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}>
+              <span style={{ fontSize: "14px", fontWeight: "600", color: "#1e40af" }}>
+                {selectedIds.length} talep seçildi
+              </span>
+              <button
+                onClick={() => bulkUpdateDurum("onaylandi")}
+                style={{
+                  padding: "6px 14px", fontSize: "13px", backgroundColor: "#10b981",
+                  color: "white", border: "none", borderRadius: "6px", cursor: "pointer",
+                  fontWeight: "500", transition: "all 0.2s",
+                }}
+              >
+                Onayla
+              </button>
+              <button
+                onClick={() => bulkUpdateDurum("reddedildi")}
+                style={{
+                  padding: "6px 14px", fontSize: "13px", backgroundColor: "#ef4444",
+                  color: "white", border: "none", borderRadius: "6px", cursor: "pointer",
+                  fontWeight: "500", transition: "all 0.2s",
+                }}
+              >
+                Reddet
+              </button>
+              <button
+                onClick={() => setSelectedIds([])}
+                style={{
+                  padding: "6px 14px", fontSize: "13px", backgroundColor: "#6b7280",
+                  color: "white", border: "none", borderRadius: "6px", cursor: "pointer",
+                  fontWeight: "500", transition: "all 0.2s",
+                }}
+              >
+                Seçimi Temizle
+              </button>
+            </div>
+          )}
+
+          {/* Talepler Tablosu */}
+          {loading ? (
+            <div>Yükleniyor...</div>
+          ) : error ? (
+            <div style={{ color: "red" }}>{error}</div>
+          ) : talepler.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}>
+              {filter === "tumu" ? "Henüz izin talebi yok." : `${getDurumLabel(filter)} durumunda talep yok.`}
+            </div>
+          ) : (
+            <div style={{
+              overflowX: "auto",
+              borderRadius: "8px",
+              border: "1px solid #e5e7eb",
+              boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+            }}>
+              <table style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                backgroundColor: "white",
+                fontSize: "14px",
+              }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#f9fafb" }}>
+                    {userProfile.is_admin && (
+                      <th style={{
+                        padding: "16px 8px", textAlign: "center",
+                        borderBottom: "2px solid #e5e7eb", width: "40px",
                       }}>
-                        <strong>Admin Notu:</strong> {talep.admin_notu}
-                      </div>
+                        <input
+                          type="checkbox"
+                          checked={talepler.length > 0 && selectedIds.length === talepler.length}
+                          onChange={toggleSelectAll}
+                          style={{ cursor: "pointer", width: "16px", height: "16px" }}
+                        />
+                      </th>
                     )}
-                  </td>
-                  <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151" }}>
-                    <span style={{
-                      padding: "4px 8px",
-                      borderRadius: "12px",
-                      fontSize: "12px",
-                      fontWeight: "bold",
-                      color: "white",
-                      backgroundColor: getDurumColor(talep.durum),
-                    }}>
-                      {getDurumLabel(talep.durum)}
-                    </span>
-                  </td>
-                  <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151" }}>
-                    {format(new Date(talep.talep_tarihi), "dd.MM.yyyy HH:mm")}
-                  </td>
-                  {userProfile.is_admin && (
-                    <td style={{ padding: "16px 12px", fontSize: "14px" }}>
-                      {talep.durum === "beklemede" && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                          <button
-                            onClick={() => handleDurumGuncelle(talep.id, "onaylandi")}
-                            style={{
-                              padding: "8px 16px", fontSize: "13px", backgroundColor: "#10b981",
-                              color: "white", border: "none", borderRadius: "6px", cursor: "pointer",
-                              fontWeight: "500", transition: "all 0.2s",
-                              boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-                            }}
-                            onMouseEnter={(e) => { e.target.style.backgroundColor = "#059669"; e.target.style.transform = "translateY(-1px)"; }}
-                            onMouseLeave={(e) => { e.target.style.backgroundColor = "#10b981"; e.target.style.transform = "translateY(0)"; }}
-                          >
-                            Onayla
-                          </button>
-                          <button
-                            onClick={() => handleDurumGuncelle(talep.id, "reddedildi")}
-                            style={{
-                              padding: "8px 16px", fontSize: "13px", backgroundColor: "#ef4444",
-                              color: "white", border: "none", borderRadius: "6px", cursor: "pointer",
-                              fontWeight: "500", transition: "all 0.2s",
-                              boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-                            }}
-                            onMouseEnter={(e) => { e.target.style.backgroundColor = "#dc2626"; e.target.style.transform = "translateY(-1px)"; }}
-                            onMouseLeave={(e) => { e.target.style.backgroundColor = "#ef4444"; e.target.style.transform = "translateY(0)"; }}
-                          >
-                            Reddet
-                          </button>
-                        </div>
-                      )}
-                      {talep.durum !== "beklemede" && talep.karar_tarihi && (
-                        <span style={{ fontSize: "12px", color: "#6b7280" }}>
-                          {format(new Date(talep.karar_tarihi), "dd.MM.yyyy HH:mm")}
-                        </span>
-                      )}
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    {userProfile.is_admin && (
+                      <th style={{
+                        padding: "16px 12px", textAlign: "left", fontSize: "14px",
+                        fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
+                      }}>Çalışan</th>
+                    )}
+                    <th style={{
+                      padding: "16px 12px", textAlign: "left", fontSize: "14px",
+                      fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
+                    }}>İzin Tipi</th>
+                    <th style={{
+                      padding: "16px 12px", textAlign: "left", fontSize: "14px",
+                      fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
+                    }}>Başlangıç</th>
+                    <th style={{
+                      padding: "16px 12px", textAlign: "left", fontSize: "14px",
+                      fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
+                    }}>Bitiş</th>
+                    <th style={{
+                      padding: "16px 12px", textAlign: "left", fontSize: "14px",
+                      fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
+                    }}>Gün</th>
+                    <th style={{
+                      padding: "16px 12px", textAlign: "left", fontSize: "14px",
+                      fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
+                    }}>Açıklama</th>
+                    <th style={{
+                      padding: "16px 12px", textAlign: "left", fontSize: "14px",
+                      fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
+                    }}>Durum</th>
+                    <th style={{
+                      padding: "16px 12px", textAlign: "left", fontSize: "14px",
+                      fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
+                    }}>Talep Tarihi</th>
+                    {userProfile.is_admin && (
+                      <th style={{
+                        padding: "16px 12px", textAlign: "left", fontSize: "14px",
+                        fontWeight: "600", color: "#374151", borderBottom: "2px solid #e5e7eb",
+                      }}>İşlemler</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {talepler.map((talep) => {
+                    const gunSayisi = differenceInCalendarDays(
+                      new Date(talep.bitis_tarihi), new Date(talep.baslangic_tarihi)
+                    );
+                    return (
+                      <tr key={talep.id} style={{
+                        borderBottom: "1px solid rgb(0, 0, 0)",
+                        transition: "background-color 0.2s",
+                        backgroundColor: selectedIds.includes(talep.id) ? "#eff6ff" : "white",
+                      }}>
+                        {userProfile.is_admin && (
+                          <td style={{ padding: "16px 8px", textAlign: "center" }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(talep.id)}
+                              onChange={() => toggleSelect(talep.id)}
+                              style={{ cursor: "pointer", width: "16px", height: "16px" }}
+                            />
+                          </td>
+                        )}
+                        {userProfile.is_admin && (
+                          <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151" }}>
+                            <div>{talep.calisan_adi}</div>
+                            <div style={{ fontSize: "12px", color: "#6b7280" }}>ID: {talep.kullanici_id}</div>
+                          </td>
+                        )}
+                        <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151" }}>
+                          <span style={{
+                            padding: "4px 8px",
+                            borderRadius: "4px",
+                            fontSize: "12px",
+                            fontWeight: "500",
+                            backgroundColor: talep.izin_tipi === "yillik_izin" ? "#dbeafe" :
+                              talep.izin_tipi === "raporlu" ? "#fef3c7" : "#f3e8ff",
+                            color: talep.izin_tipi === "yillik_izin" ? "#1e40af" :
+                              talep.izin_tipi === "raporlu" ? "#92400e" : "#6b21a8",
+                          }}>
+                            {getIzinTipiLabel(talep.izin_tipi)}
+                          </span>
+                        </td>
+                        <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151" }}>
+                          {format(new Date(talep.baslangic_tarihi), "dd MMM yyyy", { locale: trLocale })}
+                        </td>
+                        <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151" }}>
+                          {format(new Date(talep.bitis_tarihi), "dd MMM yyyy", { locale: trLocale })}
+                        </td>
+                        <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151", fontWeight: "600" }}>
+                          {gunSayisi > 0 ? gunSayisi : "-"}
+                        </td>
+                        <td style={{
+                          padding: "16px 12px", fontSize: "14px", color: "#374151", maxWidth: "200px",
+                        }}>
+                          <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                            {talep.aciklama || "-"}
+                          </div>
+                          {talep.admin_notu && (
+                            <div style={{
+                              marginTop: "8px", padding: "8px", backgroundColor: "#f0f9ff",
+                              borderRadius: "4px", fontSize: "12px", borderLeft: "3px solid #3b82f6",
+                            }}>
+                              <strong>Admin Notu:</strong> {talep.admin_notu}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151" }}>
+                          <span style={{
+                            padding: "4px 8px",
+                            borderRadius: "12px",
+                            fontSize: "12px",
+                            fontWeight: "bold",
+                            color: "white",
+                            backgroundColor: getDurumColor(talep.durum),
+                          }}>
+                            {getDurumLabel(talep.durum)}
+                          </span>
+                        </td>
+                        <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151" }}>
+                          {format(new Date(talep.talep_tarihi), "dd.MM.yyyy HH:mm")}
+                        </td>
+                        {userProfile.is_admin && (
+                          <td style={{ padding: "16px 12px", fontSize: "14px" }}>
+                            {talep.durum === "beklemede" && (
+                              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                <button
+                                  onClick={() => handleDurumGuncelle(talep.id, "onaylandi")}
+                                  style={{
+                                    padding: "8px 16px", fontSize: "13px", backgroundColor: "#10b981",
+                                    color: "white", border: "none", borderRadius: "6px", cursor: "pointer",
+                                    fontWeight: "500", transition: "all 0.2s",
+                                    boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+                                  }}
+                                  onMouseEnter={(e) => { e.target.style.backgroundColor = "#059669"; e.target.style.transform = "translateY(-1px)"; }}
+                                  onMouseLeave={(e) => { e.target.style.backgroundColor = "#10b981"; e.target.style.transform = "translateY(0)"; }}
+                                >
+                                  Onayla
+                                </button>
+                                <button
+                                  onClick={() => handleDurumGuncelle(talep.id, "reddedildi")}
+                                  style={{
+                                    padding: "8px 16px", fontSize: "13px", backgroundColor: "#ef4444",
+                                    color: "white", border: "none", borderRadius: "6px", cursor: "pointer",
+                                    fontWeight: "500", transition: "all 0.2s",
+                                    boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+                                  }}
+                                  onMouseEnter={(e) => { e.target.style.backgroundColor = "#dc2626"; e.target.style.transform = "translateY(-1px)"; }}
+                                  onMouseLeave={(e) => { e.target.style.backgroundColor = "#ef4444"; e.target.style.transform = "translateY(0)"; }}
+                                >
+                                  Reddet
+                                </button>
+                              </div>
+                            )}
+                            {talep.durum !== "beklemede" && talep.karar_tarihi && (
+                              <span style={{ fontSize: "12px", color: "#6b7280" }}>
+                                {format(new Date(talep.karar_tarihi), "dd.MM.yyyy HH:mm")}
+                              </span>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Yıllık İzin Özet Tablosu - Admin */}
-      {userProfile.is_admin && (
-        <div style={{ marginTop: "40px" }}>
+      {/* ========== YILLIK İZİN ÖZET TABLOSU ========== */}
+      {userProfile.is_admin && activeSubTab === "ozet" && (
+        <div>
           <div style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
             marginBottom: "16px", flexWrap: "wrap", gap: "12px",
@@ -802,7 +1025,7 @@ export default function IzinTalepleri() {
                           <td key={ay} style={{
                             padding: "8px 6px", textAlign: "center",
                             border: "1px solid #16a34a",
-                            backgroundColor: hasData ? "#f0fdf4" : "#f0fdf4",
+                            backgroundColor: "#f0fdf4",
                             color: "#374151", fontSize: "12px", fontWeight: hasData ? "600" : "normal",
                             whiteSpace: "nowrap",
                           }}>
