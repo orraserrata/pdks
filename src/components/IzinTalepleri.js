@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../supabaseClient";
-import { format } from "date-fns";
+import { format, differenceInCalendarDays } from "date-fns";
 import { tr as trLocale } from "date-fns/locale";
 
 export default function IzinTalepleri() {
@@ -18,6 +18,12 @@ export default function IzinTalepleri() {
   const [formAciklama, setFormAciklama] = useState("");
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
+
+  // Yıllık özet tablosu state
+  const [summaryYear, setSummaryYear] = useState(new Date().getFullYear());
+  const [summaryData, setSummaryData] = useState([]);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [personelList, setPersonelList] = useState([]);
 
   const izinTipleri = [
     { value: "ucretsiz_izin", label: "Ücretsiz İzin" },
@@ -94,6 +100,14 @@ export default function IzinTalepleri() {
       loadTalepler();
     }
   }, [userProfile, filter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Özet tablosu verilerini yükle (admin)
+  useEffect(() => {
+    if (userProfile?.is_admin) {
+      loadPersonelList();
+      loadSummaryData();
+    }
+  }, [userProfile, summaryYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadTalepler() {
     setLoading(true);
@@ -209,6 +223,96 @@ export default function IzinTalepleri() {
     }
   }
 
+  async function loadPersonelList() {
+    try {
+      const { data } = await supabase
+        .from("personel")
+        .select("kullanici_id, isim, soyisim, aktif")
+        .order("isim", { ascending: true });
+      setPersonelList(data || []);
+    } catch (err) {
+      console.error("Personel listesi yükleme hatası:", err);
+    }
+  }
+
+  async function loadSummaryData() {
+    setSummaryLoading(true);
+    try {
+      const { data, error: fetchErr } = await supabase
+        .from("izin_talepleri")
+        .select("*")
+        .eq("durum", "onaylandi")
+        .gte("baslangic_tarihi", `${summaryYear}-01-01`)
+        .lte("bitis_tarihi", `${summaryYear}-12-31`);
+
+      if (fetchErr) {
+        console.error("Özet veri yükleme hatası:", fetchErr);
+        setSummaryData([]);
+      } else {
+        setSummaryData(data || []);
+      }
+    } catch (err) {
+      console.error("Özet veri yükleme hatası:", err);
+      setSummaryData([]);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }
+
+  // Ay bazlı gün sayısı hesaplama
+  function calculateDaysInMonth(baslangic, bitis, year, month) {
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0); // Ayın son günü
+    const izinStart = new Date(baslangic);
+    const izinEnd = new Date(bitis);
+
+    const effectiveStart = izinStart > monthStart ? izinStart : monthStart;
+    const effectiveEnd = izinEnd < monthEnd ? izinEnd : monthEnd;
+
+    if (effectiveStart > effectiveEnd) return 0;
+    return differenceInCalendarDays(effectiveEnd, effectiveStart) + 1;
+  }
+
+  // Özet tablo verilerini hesapla
+  const summaryRows = useMemo(() => {
+    const aylar = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+    return personelList.map((p) => {
+      const kisiTalepleri = summaryData.filter((t) => t.kullanici_id === p.kullanici_id);
+      const months = {};
+
+      aylar.forEach((ay) => {
+        let yillik = 0;
+        let raporlu = 0;
+        let ucretsiz = 0;
+
+        kisiTalepleri.forEach((t) => {
+          const gun = calculateDaysInMonth(t.baslangic_tarihi, t.bitis_tarihi, summaryYear, ay);
+          if (gun > 0) {
+            if (t.izin_tipi === "yillik_izin") yillik += gun;
+            else if (t.izin_tipi === "raporlu") raporlu += gun;
+            else if (t.izin_tipi === "ucretsiz_izin") ucretsiz += gun;
+          }
+        });
+
+        months[ay] = { yillik, raporlu, ucretsiz };
+      });
+
+      return {
+        kullanici_id: p.kullanici_id,
+        isim: p.isim,
+        soyisim: p.soyisim,
+        aktif: p.aktif,
+        months,
+      };
+    });
+  }, [personelList, summaryData, summaryYear]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const ayIsimleri = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN",
+    "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
+
+  const summaryYears = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+
   function getIzinTipiLabel(tip) {
     const t = izinTipleri.find((x) => x.value === tip);
     return t ? t.label : tip;
@@ -230,6 +334,14 @@ export default function IzinTalepleri() {
       case "reddedildi": return "Reddedildi";
       default: return durum;
     }
+  }
+
+  function renderCellContent(m) {
+    const parts = [];
+    if (m.yillik > 0) parts.push(String(m.yillik));
+    if (m.raporlu > 0) parts.push(m.raporlu + "(RAPOR)");
+    if (m.ucretsiz > 0) parts.push(m.ucretsiz + "(ÜCRETSİZ)");
+    return parts.length > 0 ? parts.join(" ") : "";
   }
 
   // Giriş yapılmamışsa uyarı göster
@@ -615,6 +727,95 @@ export default function IzinTalepleri() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Yıllık İzin Özet Tablosu - Admin */}
+      {userProfile.is_admin && (
+        <div style={{ marginTop: "40px" }}>
+          <div style={{
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            marginBottom: "16px", flexWrap: "wrap", gap: "12px",
+          }}>
+            <h3 style={{ margin: 0, fontSize: "18px", color: "#166534", fontWeight: "700" }}>
+              📊 Yıllık İzin Özet Tablosu
+            </h3>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151" }}>Yıl:</label>
+              <select
+                value={summaryYear}
+                onChange={(e) => setSummaryYear(parseInt(e.target.value))}
+                style={{
+                  padding: "6px 12px", border: "1px solid #16a34a",
+                  borderRadius: "6px", fontSize: "14px", backgroundColor: "white",
+                }}
+              >
+                {summaryYears.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {summaryLoading ? (
+            <div>Yükleniyor...</div>
+          ) : (
+            <div style={{ overflowX: "auto", borderRadius: "4px", border: "2px solid #16a34a" }}>
+              <table style={{
+                width: "100%", borderCollapse: "collapse", fontSize: "13px",
+                minWidth: "1200px",
+              }}>
+                <thead>
+                  <tr>
+                    <th style={{
+                      padding: "10px 12px", textAlign: "left", fontWeight: "700",
+                      backgroundColor: "#dcfce7", color: "#166534",
+                      border: "1px solid #16a34a", whiteSpace: "nowrap",
+                      position: "sticky", left: 0, zIndex: 1, minWidth: "180px",
+                    }}>ADI SOYADI</th>
+                    {ayIsimleri.map((ay, i) => (
+                      <th key={i} style={{
+                        padding: "10px 8px", textAlign: "center", fontWeight: "700",
+                        backgroundColor: "#dcfce7", color: "#166534",
+                        border: "1px solid #16a34a", whiteSpace: "nowrap",
+                        minWidth: "80px",
+                      }}>{ay}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {summaryRows.map((row) => (
+                    <tr key={row.kullanici_id}>
+                      <td style={{
+                        padding: "8px 12px", fontWeight: "700", textAlign: "center",
+                        border: "1px solid #16a34a", backgroundColor: "#f0fdf4",
+                        color: row.aktif === false ? "#dc2626" : "#166534",
+                        whiteSpace: "nowrap", position: "sticky", left: 0, zIndex: 1,
+                      }}>
+                        {(row.isim || "").toUpperCase()} {(row.soyisim || "").toUpperCase()}
+                      </td>
+                      {[1,2,3,4,5,6,7,8,9,10,11,12].map((ay) => {
+                        const m = row.months[ay];
+                        const content = renderCellContent(m);
+                        const hasData = content !== "";
+                        return (
+                          <td key={ay} style={{
+                            padding: "8px 6px", textAlign: "center",
+                            border: "1px solid #16a34a",
+                            backgroundColor: hasData ? "#f0fdf4" : "#f0fdf4",
+                            color: "#374151", fontSize: "12px", fontWeight: hasData ? "600" : "normal",
+                            whiteSpace: "nowrap",
+                          }}>
+                            {content}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>
