@@ -74,7 +74,7 @@ function TumCalisanlar() {
 
         detaylar[calisan.kullanici_id] = {
           toplamSure: toplamSure.toFixed(2),
-          kayitSayisi: calisanKayitlari.length
+          kayitSayisi: new Set(calisanKayitlari.map(k => k.workday_date || k.giris_tarihi?.split('T')[0])).size
         };
       });
 
@@ -117,7 +117,7 @@ function TumCalisanlar() {
             <th>Kullanıcı ID</th>
             <th>Durum</th>
             <th>Toplam Süre (Saat)</th>
-            <th>Kayıt Sayısı</th>
+            <th>İşe Gelinen Gün</th>
           </tr>
         </thead>
             <tbody>
@@ -256,7 +256,7 @@ function TumCalisanlar() {
             <th>Kullanıcı ID</th>
             <th>Durum</th>
             <th>Toplam Süre (Saat)</th>
-            <th>Kayıt Sayısı</th>
+            <th>İşe Gelinen Gün</th>
           </tr>
         </thead>
         <tbody>
