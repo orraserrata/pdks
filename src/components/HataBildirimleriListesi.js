@@ -10,6 +10,7 @@ export default function HataBildirimleriListesi() {
   const [filter, setFilter] = useState("tumu"); // tumu, beklemede, inceleniyor, cozuldu, reddedildi
   const [session, setSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   useEffect(() => {
     if (userProfile) {
@@ -134,13 +135,64 @@ export default function HataBildirimleriListesi() {
         .eq("id", id);
 
       if (updateError) {
-        alert(updateError.message || "Durum güncellenemedi");
+        alert(updateError.message || "Durum g\u00fcncellenemedi");
       } else {
-        // Listeyi yenile
         loadBildirimler();
       }
     } catch (err) {
       alert(String(err.message || err));
+    }
+  }
+
+  async function bulkUpdateDurum(yeniDurum) {
+    if (selectedIds.length === 0) {
+      alert("L\u00fctfen en az bir bildirim se\u00e7in.");
+      return;
+    }
+
+    let not = null;
+    if (yeniDurum === "reddedildi") {
+      not = prompt("Se\u00e7ili " + selectedIds.length + " bildirim i\u00e7in red nedeni:");
+      if (not === null) return;
+    } else if (yeniDurum === "cozuldu") {
+      not = prompt("Se\u00e7ili " + selectedIds.length + " bildirim i\u00e7in \u00e7\u00f6z\u00fcm notu (opsiyonel):");
+      if (not === null) return;
+    }
+
+    try {
+      const updateData = {
+        durum: yeniDurum,
+        cozum_tarihi: new Date().toISOString(),
+      };
+      if (not) updateData.cozum_notu = not;
+
+      const { error: updateError } = await supabase
+        .from("hata_bildirimleri")
+        .update(updateData)
+        .in("id", selectedIds);
+
+      if (updateError) {
+        alert(updateError.message || "Toplu g\u00fcncelleme ba\u015far\u0131s\u0131z");
+      } else {
+        setSelectedIds([]);
+        loadBildirimler();
+      }
+    } catch (err) {
+      alert(String(err.message || err));
+    }
+  }
+
+  function toggleSelect(id) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.length === bildirimler.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(bildirimler.map((b) => b.id));
     }
   }
 
@@ -226,6 +278,65 @@ export default function HataBildirimleriListesi() {
         </select>
       </div>
 
+      {/* Toplu Islem Cubugu - Sadece Admin */}
+      {userProfile?.is_admin && selectedIds.length > 0 && (
+        <div style={{
+          marginBottom: "12px",
+          padding: "12px 16px",
+          backgroundColor: "#eff6ff",
+          border: "1px solid #3b82f6",
+          borderRadius: "8px",
+          display: "flex",
+          gap: "12px",
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}>
+          <span style={{ fontSize: "14px", fontWeight: "600", color: "#1e40af" }}>
+            {selectedIds.length} bildirim seçildi
+          </span>
+          <button
+            onClick={() => bulkUpdateDurum("inceleniyor")}
+            style={{
+              padding: "6px 14px", fontSize: "13px", backgroundColor: "#3b82f6",
+              color: "white", border: "none", borderRadius: "6px", cursor: "pointer",
+              fontWeight: "500", transition: "all 0.2s",
+            }}
+          >
+            İncelemeye Al
+          </button>
+          <button
+            onClick={() => bulkUpdateDurum("cozuldu")}
+            style={{
+              padding: "6px 14px", fontSize: "13px", backgroundColor: "#10b981",
+              color: "white", border: "none", borderRadius: "6px", cursor: "pointer",
+              fontWeight: "500", transition: "all 0.2s",
+            }}
+          >
+            Çözüldü
+          </button>
+          <button
+            onClick={() => bulkUpdateDurum("reddedildi")}
+            style={{
+              padding: "6px 14px", fontSize: "13px", backgroundColor: "#ef4444",
+              color: "white", border: "none", borderRadius: "6px", cursor: "pointer",
+              fontWeight: "500", transition: "all 0.2s",
+            }}
+          >
+            Reddet
+          </button>
+          <button
+            onClick={() => setSelectedIds([])}
+            style={{
+              padding: "6px 14px", fontSize: "13px", backgroundColor: "#6b7280",
+              color: "white", border: "none", borderRadius: "6px", cursor: "pointer",
+              fontWeight: "500", transition: "all 0.2s",
+            }}
+          >
+            Seçimi Temizle
+          </button>
+        </div>
+      )}
+
       {bildirimler.length === 0 ? (
         <div style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}>
           {filter === "tumu" ? "Henüz hata bildirimi yok." : `${getDurumLabel(filter)} durumunda bildirim yok.`}
@@ -245,6 +356,19 @@ export default function HataBildirimleriListesi() {
           }}>
             <thead>
               <tr style={{ backgroundColor: "#f9fafb" }}>
+                {userProfile?.is_admin && (
+                  <th style={{
+                    padding: "16px 8px", textAlign: "center",
+                    borderBottom: "2px solid #e5e7eb", width: "40px",
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={bildirimler.length > 0 && selectedIds.length === bildirimler.length}
+                      onChange={toggleSelectAll}
+                      style={{ cursor: "pointer", width: "16px", height: "16px" }}
+                    />
+                  </th>
+                )}
                 <th style={{ 
                   padding: "16px 12px", 
                   textAlign: "left", 
@@ -307,8 +431,19 @@ export default function HataBildirimleriListesi() {
               {bildirimler.map((bildirim) => (
                 <tr key={bildirim.id} style={{ 
                   borderBottom: "1px solid rgb(0, 0, 0)",
-                  transition: "background-color 0.2s"
+                  transition: "background-color 0.2s",
+                  backgroundColor: selectedIds.includes(bildirim.id) ? "#eff6ff" : "white",
                 }}>
+                  {userProfile?.is_admin && (
+                    <td style={{ padding: "16px 8px", textAlign: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(bildirim.id)}
+                        onChange={() => toggleSelect(bildirim.id)}
+                        style={{ cursor: "pointer", width: "16px", height: "16px" }}
+                      />
+                    </td>
+                  )}
                   <td style={{ 
                     padding: "16px 12px", 
                     fontSize: "14px", 
