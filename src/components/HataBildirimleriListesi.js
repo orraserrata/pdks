@@ -12,8 +12,10 @@ export default function HataBildirimleriListesi() {
   const [userProfile, setUserProfile] = useState(null);
 
   useEffect(() => {
-    loadBildirimler();
-  }, [filter]);
+    if (userProfile) {
+      loadBildirimler();
+    }
+  }, [filter, userProfile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -89,6 +91,11 @@ export default function HataBildirimleriListesi() {
         .from("hata_bildirimleri")
         .select("*")
         .order("bildirim_tarihi", { ascending: false });
+
+      // Normal kullanıcı sadece kendi bildirimlerini görebilir
+      if (!userProfile?.is_admin && userProfile?.kullanici_id) {
+        query = query.eq("kullanici_id", userProfile.kullanici_id);
+      }
 
       if (filter !== "tumu") {
         query = query.eq("durum", filter);
