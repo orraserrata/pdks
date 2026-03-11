@@ -8,6 +8,10 @@ export default function GirisYap({ onSuccess }) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -143,6 +147,83 @@ export default function GirisYap({ onSuccess }) {
           {loading ? "Giriş Yapılıyor..." : "Giriş Yap"}
         </button>
       </form>
+
+      {/* Şifremi Unuttum */}
+      <div style={{ textAlign: "center", marginTop: "12px" }}>
+        <button
+          type="button"
+          onClick={() => { setShowReset(!showReset); setResetMessage(""); }}
+          style={{
+            background: "none", border: "none", color: "#3b82f6",
+            fontSize: "14px", cursor: "pointer", textDecoration: "underline",
+          }}
+        >
+          Şifremi Unuttum
+        </button>
+      </div>
+
+      {showReset && (
+        <div style={{
+          marginTop: "12px", padding: "16px",
+          backgroundColor: "#f9fafb", border: "1px solid #e5e7eb",
+          borderRadius: "8px",
+        }}>
+          <p style={{ fontSize: "13px", color: "#374151", marginBottom: "12px" }}>
+            E-posta adresinizi girin, şifre sıfırlama linki gönderelim.
+          </p>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <input
+              type="email"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+              placeholder="E-posta adresiniz"
+              style={{
+                flex: 1, padding: "8px 12px",
+                border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "14px",
+              }}
+            />
+            <button
+              type="button"
+              disabled={resetLoading || !resetEmail}
+              onClick={async () => {
+                setResetLoading(true);
+                setResetMessage("");
+                try {
+                  const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+                    redirectTo: window.location.origin,
+                  });
+                  if (error) throw error;
+                  setResetMessage("✅ Şifre sıfırlama linki gönderildi! E-postanızı kontrol edin.");
+                  setResetEmail("");
+                } catch (err) {
+                  setResetMessage("❌ " + (err.message || "Bir hata oluştu"));
+                } finally {
+                  setResetLoading(false);
+                }
+              }}
+              style={{
+                padding: "8px 16px", backgroundColor: resetLoading ? "#9ca3af" : "#f59e0b",
+                color: "white", border: "none", borderRadius: "6px",
+                fontSize: "14px", fontWeight: "500",
+                cursor: resetLoading || !resetEmail ? "not-allowed" : "pointer",
+              }}
+            >
+              {resetLoading ? "Gönderiliyor..." : "Gönder"}
+            </button>
+          </div>
+          {resetMessage && (
+            <div style={{
+              marginTop: "8px", padding: "8px 12px",
+              backgroundColor: resetMessage.includes("✅") ? "#dcfce7" : "#fee2e2",
+              border: "1px solid " + (resetMessage.includes("✅") ? "#10b981" : "#fecaca"),
+              borderRadius: "6px", fontSize: "13px",
+              color: resetMessage.includes("✅") ? "#166534" : "#dc2626",
+            }}>
+              {resetMessage}
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{
         marginTop: "16px",
