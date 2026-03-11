@@ -15,6 +15,7 @@ import Modal from "./components/Modal";
 import ErrorBoundary from "./components/ErrorBoundary";
 import MaasHesabi from "./components/MaasHesabi";
 import Maasim from "./components/Maasim";
+import IzinTalepleri from "./components/IzinTalepleri";
 
 function App() {
   const [personeller, setPersoneller] = useState([]);
@@ -206,6 +207,13 @@ function App() {
                 </button>
               )}
               
+              {/* İzin Talepleri - hem normal kullanıcılar hem admin kullanıcılar görebilir */}
+              <button 
+                className={`tab ${activeTab === 'izinTalepleri' ? 'tab-active' : ''}`} 
+                onClick={() => setActiveTab('izinTalepleri')}
+              >
+                İzin Talepleri
+              </button>
               {/* Hata Bildirimleri - hem normal kullanıcılar hem admin kullanıcılar görebilir */}
               <button 
                 className={`tab ${activeTab === 'hataBildirimleri' ? 'tab-active' : ''}`} 
@@ -267,6 +275,10 @@ function App() {
             <AdminPanel />
             <div style={{ height: 12 }} />
             <AdminSettings />
+          </div>
+        ) : activeTab === 'izinTalepleri' ? (
+          <div className="card">
+            <IzinTalepleri />
           </div>
         ) : activeTab === 'hataBildirimleri' ? (
           <div className="card">
