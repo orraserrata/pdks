@@ -316,9 +316,9 @@ export default function IzinTalepleri() {
           if (isNaN(yearsEmployed) || yearsEmployed < 0) yearsEmployed = 0;
           
           const earnedBlocks = Math.min(yearsEmployed, Math.floor((myData.total_working_days || 0) / 300));
-          const totalEarned = earnedBlocks * 14;
+          const totalEarned = (myData.manuel_hakedilen_izin || 0) + (earnedBlocks * 14);
           const devreden = myData.devreden_yillik_izin || 0;
-          const usedTotal = myData.used_leave || 0;
+          const usedTotal = (myData.manuel_kullanilan_izin || 0) + (myData.used_leave || 0);
           const remaining = totalEarned + devreden - usedTotal;
           
           setMyLeaveSummary({
@@ -366,6 +366,48 @@ export default function IzinTalepleri() {
       } else {
         loadPersonelList(); // Listeyi RPC'den tazelemek için
       }
+    } catch(err) {
+      alert("Beklenmeyen hata: " + err.message);
+    }
+  }
+
+  async function handleEditHakedilen(kullanici_id, mevcut, isim, soyisim) {
+    const adSoyad = `${isim} ${soyisim || ""}`.trim();
+    const newValStr = prompt(`${adSoyad} için geçmiş seneden eklenmek istenen HAK EDİLEN yıllık izin gün sayısını girin.\n(Mevcut Manuel Ek: ${mevcut || 0})\n*Otomatik kazanılan izinlerin üzerine eklenecektir.`, mevcut || 0);
+    if (newValStr === null) return;
+    
+    const newVal = parseInt(newValStr);
+    if (isNaN(newVal)) return alert("Lütfen geçerli bir sayı girin.");
+    
+    try {
+      const { error } = await supabase
+        .from("personel")
+        .update({ manuel_hakedilen_izin: newVal })
+        .eq("kullanici_id", kullanici_id);
+        
+      if (error) alert("Güncellenemedi: " + error.message);
+      else loadPersonelList();
+    } catch(err) {
+      alert("Beklenmeyen hata: " + err.message);
+    }
+  }
+
+  async function handleEditKullanilan(kullanici_id, mevcut, isim, soyisim) {
+    const adSoyad = `${isim} ${soyisim || ""}`.trim();
+    const newValStr = prompt(`${adSoyad} için geçmiş seneden eklenmek istenen KULLANILAN yıllık izin gün sayısını girin.\n(Mevcut Manuel Ek: ${mevcut || 0})\n*Otomasyondaki mevcut onaylanmış taleplerin üzerine eklenecektir.`, mevcut || 0);
+    if (newValStr === null) return;
+    
+    const newVal = parseInt(newValStr);
+    if (isNaN(newVal)) return alert("Lütfen geçerli bir sayı girin.");
+    
+    try {
+      const { error } = await supabase
+        .from("personel")
+        .update({ manuel_kullanilan_izin: newVal })
+        .eq("kullanici_id", kullanici_id);
+        
+      if (error) alert("Güncellenemedi: " + error.message);
+      else loadPersonelList();
     } catch(err) {
       alert("Beklenmeyen hata: " + err.message);
     }
@@ -442,9 +484,12 @@ export default function IzinTalepleri() {
       
       const totalDays = p.total_working_days || 0;
       const earnedBlocks = Math.min(yearsEmployed, Math.floor(totalDays / 300));
-      const totalEarned = earnedBlocks * 14;
+      const manuelHakedilen = p.manuel_hakedilen_izin || 0;
+      const manuelKullanilan = p.manuel_kullanilan_izin || 0;
+      
+      const totalEarned = manuelHakedilen + (earnedBlocks * 14);
       const devreden = p.devreden_yillik_izin || 0;
-      const usedTotal = p.used_leave || 0;
+      const usedTotal = manuelKullanilan + (p.used_leave || 0);
       const remaining = totalEarned + devreden - usedTotal;
 
       return {
@@ -458,7 +503,9 @@ export default function IzinTalepleri() {
         usedTotal,
         remaining,
         yearsEmployed,
-        totalDays
+        totalDays,
+        manuelHakedilen,
+        manuelKullanilan
       };
     });
   }, [personelList, summaryData, summaryYear]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1240,7 +1287,9 @@ export default function IzinTalepleri() {
                           (Toplam: {row.totalDays} Gün)
                         </div>
                       </td>
-                      <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #c7d2fe", backgroundColor: "#eef2ff", fontWeight: "600", color: "#3730a3" }}>
+                      <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #c7d2fe", backgroundColor: "#eef2ff", fontWeight: "600", color: "#3730a3", cursor: "pointer", textDecoration: "underline" }}
+                          onClick={() => handleEditHakedilen(row.kullanici_id, row.manuelHakedilen, row.isim, row.soyisim)}
+                          title="Önceki sistemden kazanılan izni manuel girmek/düzenlemek için tıklayın">
                         {row.totalEarned}
                       </td>
                       <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #c7d2fe", backgroundColor: "#eef2ff", fontWeight: "600", color: "#2563eb", cursor: "pointer", textDecoration: "underline" }}
@@ -1248,7 +1297,9 @@ export default function IzinTalepleri() {
                           title="Geçmiş seneden devreden izni düzenlemek için tıklayın">
                         {row.devreden}
                       </td>
-                      <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #fecaca", backgroundColor: "#fef2f2", fontWeight: "600", color: "#991b1b" }}>
+                      <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #fecaca", backgroundColor: "#fef2f2", fontWeight: "600", color: "#991b1b", cursor: "pointer", textDecoration: "underline" }}
+                          onClick={() => handleEditKullanilan(row.kullanici_id, row.manuelKullanilan, row.isim, row.soyisim)}
+                          title="Önceki sistemde kullanılmış izni manuel girmek/düzenlemek için tıklayın">
                         {row.usedTotal}
                       </td>
                       <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #a7f3d0", backgroundColor: "#ecfdf5", fontWeight: "bold", fontSize: "14px", color: "#064e3b" }}>
