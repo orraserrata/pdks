@@ -11,12 +11,14 @@ export default function HataBildirimleriListesi() {
   const [session, setSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     if (userProfile) {
       loadBildirimler();
     }
-  }, [filter, userProfile]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filter, userProfile, selectedMonth, selectedYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -101,6 +103,13 @@ export default function HataBildirimleriListesi() {
       if (filter !== "tumu") {
         query = query.eq("durum", filter);
       }
+
+      // Tarih filtresi uygula
+      const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+      const endDate = new Date(selectedYear, selectedMonth, 0); // O ayın son günü
+      const endDateString = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}T23:59:59`;
+      
+      query = query.gte("bildirim_tarihi", startDate).lte("bildirim_tarihi", endDateString);
 
       const { data, error: fetchError } = await query;
 
@@ -264,24 +273,51 @@ export default function HataBildirimleriListesi() {
     <div>
       <h2>Hata Bildirimleri</h2>
       
-      <div style={{ marginBottom: "16px" }}>
-        <label style={{ marginRight: "12px", fontWeight: "bold" }}>Filtre:</label>
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          style={{
-            padding: "6px 12px",
-            border: "1px solid #d1d5db",
-            borderRadius: "4px",
-            fontSize: "14px"
-          }}
-        >
-          <option value="tumu">Tümü</option>
-          <option value="beklemede">Beklemede</option>
-          <option value="inceleniyor">İnceleniyor</option>
-          <option value="cozuldu">Çözüldü</option>
-          <option value="reddedildi">Reddedildi</option>
-        </select>
+      <div style={{ marginBottom: "16px", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+        <div>
+          <label style={{ marginRight: "8px", fontWeight: "bold", fontSize: "14px" }}>Ay:</label>
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+            style={{ padding: "6px 12px", border: "1px solid #d1d5db", borderRadius: "4px", fontSize: "14px" }}
+          >
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
+              <option key={m} value={m}>{new Date(2000, m - 1).toLocaleString('tr-TR', { month: 'long' })}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label style={{ marginRight: "8px", fontWeight: "bold", fontSize: "14px" }}>Yıl:</label>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            style={{ padding: "6px 12px", border: "1px solid #d1d5db", borderRadius: "4px", fontSize: "14px" }}
+          >
+            {[...Array(5)].map((_, i) => {
+              const year = new Date().getFullYear() - 2 + i;
+              return <option key={year} value={year}>{year}</option>;
+            })}
+          </select>
+        </div>
+        <div>
+          <label style={{ marginRight: "8px", fontWeight: "bold", fontSize: "14px" }}>Durum:</label>
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            style={{
+              padding: "6px 12px",
+              border: "1px solid #d1d5db",
+              borderRadius: "4px",
+              fontSize: "14px"
+            }}
+          >
+            <option value="tumu">Tümü</option>
+            <option value="beklemede">Beklemede</option>
+            <option value="inceleniyor">İnceleniyor</option>
+            <option value="cozuldu">Çözüldü</option>
+            <option value="reddedildi">Reddedildi</option>
+          </select>
+        </div>
       </div>
 
       {/* Toplu Islem Cubugu - Sadece Admin */}

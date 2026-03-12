@@ -8,6 +8,8 @@ export default function IzinTalepleri() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("tumu");
+  const [listMonth, setListMonth] = useState(new Date().getMonth() + 1);
+  const [listYear, setListYear] = useState(new Date().getFullYear());
   const [session, setSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
 
@@ -106,7 +108,7 @@ export default function IzinTalepleri() {
     if (userProfile) {
       loadTalepler();
     }
-  }, [userProfile, filter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [userProfile, filter, listMonth, listYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Özet tablosu verilerini yükle (admin)
   useEffect(() => {
@@ -132,6 +134,13 @@ export default function IzinTalepleri() {
       if (filter !== "tumu") {
         query = query.eq("durum", filter);
       }
+
+      // Tarih filtresi uygula
+      const startDate = `${listYear}-${String(listMonth).padStart(2, '0')}-01`;
+      const endDate = new Date(listYear, listMonth, 0); // O ayın son günü
+      const endDateString = `${listYear}-${String(listMonth).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}T23:59:59`;
+      
+      query = query.gte("talep_tarihi", startDate).lte("talep_tarihi", endDateString);
 
       const { data, error: fetchError } = await query;
 
@@ -651,7 +660,35 @@ export default function IzinTalepleri() {
       {(activeSubTab === "talepler" || !userProfile.is_admin) && (
         <div>
           {/* Filtre */}
-          <div style={{ marginBottom: "16px", display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ marginBottom: "16px", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "14px", fontWeight: "500", color: "#374151" }}>Ay:</span>
+              <select
+                value={listMonth}
+                onChange={(e) => setListMonth(parseInt(e.target.value))}
+                style={{ padding: "6px 12px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "13px" }}
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
+                  <option key={m} value={m}>{new Date(2000, m - 1).toLocaleString('tr-TR', { month: 'long' })}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "14px", fontWeight: "500", color: "#374151" }}>Yıl:</span>
+              <select
+                value={listYear}
+                onChange={(e) => setListYear(parseInt(e.target.value))}
+                style={{ padding: "6px 12px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "13px" }}
+              >
+                {[...Array(5)].map((_, i) => {
+                  const year = new Date().getFullYear() - 2 + i;
+                  return <option key={year} value={year}>{year}</option>;
+                })}
+              </select>
+            </div>
+            
+            <div style={{ width: "1px", height: "24px", backgroundColor: "#d1d5db", margin: "0 4px" }}></div>
+            
             <span style={{ fontSize: "14px", fontWeight: "500", color: "#374151" }}>Durum:</span>
             {[
               { value: "tumu", label: "Tümü", color: "#3b82f6" },
