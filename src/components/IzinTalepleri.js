@@ -286,10 +286,16 @@ export default function IzinTalepleri() {
   }
 
   function toggleSelectAll() {
-    if (selectedIds.length === talepler.length) {
+    const selectableTalepler = talepler.filter(
+      t => t.durum === "beklemede"
+    );
+
+    if (selectableTalepler.length === 0) return;
+
+    if (selectedIds.length === selectableTalepler.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(talepler.map((t) => t.id));
+      setSelectedIds(selectableTalepler.map((t) => t.id));
     }
   }
 
@@ -814,9 +820,16 @@ export default function IzinTalepleri() {
                       }}>
                         <input
                           type="checkbox"
-                          checked={talepler.length > 0 && selectedIds.length === talepler.length}
+                          disabled={talepler.filter(t => t.durum === "beklemede").length === 0}
+                          checked={
+                            talepler.filter(t => t.durum === "beklemede").length > 0 &&
+                            selectedIds.length === talepler.filter(t => t.durum === "beklemede").length
+                          }
                           onChange={toggleSelectAll}
-                          style={{ cursor: "pointer", width: "16px", height: "16px" }}
+                          style={{ 
+                            cursor: talepler.filter(t => t.durum === "beklemede").length === 0 ? "not-allowed" : "pointer", 
+                            width: "16px", height: "16px" 
+                          }}
                         />
                       </th>
                     )}
@@ -879,7 +892,12 @@ export default function IzinTalepleri() {
                               type="checkbox"
                               checked={selectedIds.includes(talep.id)}
                               onChange={() => toggleSelect(talep.id)}
-                              style={{ cursor: "pointer", width: "16px", height: "16px" }}
+                              disabled={talep.durum !== "beklemede"}
+                              style={{ 
+                                cursor: talep.durum !== "beklemede" ? "not-allowed" : "pointer", 
+                                width: "16px", height: "16px",
+                                opacity: talep.durum !== "beklemede" ? 0.4 : 1
+                              }}
                             />
                           </td>
                         )}
