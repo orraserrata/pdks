@@ -102,7 +102,7 @@ export default function IzinTalepleri() {
     }
 
     loadUserProfile();
-  }, [session]);
+  }, [session?.user?.id, session?.user?.email]);
 
   // Talepleri yükle
   useEffect(() => {

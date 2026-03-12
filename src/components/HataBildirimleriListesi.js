@@ -84,7 +84,7 @@ export default function HataBildirimleriListesi() {
     }
 
     loadUserProfile();
-  }, [session]);
+  }, [session?.user?.id, session?.user?.email]);
 
   async function loadBildirimler() {
     setLoading(true);

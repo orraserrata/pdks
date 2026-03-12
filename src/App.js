@@ -124,7 +124,7 @@ function App() {
     }
 
     loadUserProfile();
-  }, [session]);
+  }, [session?.user?.id, session?.user?.email]);
 
   useEffect(() => {
     // İlk yüklemede session'ı al
