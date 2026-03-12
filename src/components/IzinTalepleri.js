@@ -1236,6 +1236,9 @@ export default function IzinTalepleri() {
                         whiteSpace: "nowrap", position: "sticky", left: 0, zIndex: 1,
                       }}>
                         {(row.isim || "").toUpperCase()} {(row.soyisim || "").toUpperCase()}
+                        <div style={{ fontSize: "11px", color: row.aktif === false ? "#fca5a5" : "#65a30d", fontWeight: "normal", marginTop: "4px" }}>
+                          (Toplam: {row.totalDays} Gün)
+                        </div>
                       </td>
                       <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #c7d2fe", backgroundColor: "#eef2ff", fontWeight: "600", color: "#3730a3" }}>
                         {row.totalEarned}
