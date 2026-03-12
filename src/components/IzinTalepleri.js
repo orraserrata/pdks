@@ -116,9 +116,9 @@ export default function IzinTalepleri() {
     }
   }, [userProfile, filter, listMonth, listYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Özet tablosu verilerini yükle (admin)
+  // Özet tablosu verilerini yükle
   useEffect(() => {
-    if (userProfile?.is_admin) {
+    if (userProfile) {
       loadPersonelList();
       loadSummaryData();
     }
@@ -315,8 +315,7 @@ export default function IzinTalepleri() {
           let yearsEmployed = Math.floor(differenceInCalendarDays(new Date(), iseGiris) / 365.25);
           if (isNaN(yearsEmployed) || yearsEmployed < 0) yearsEmployed = 0;
           
-          const earnedBlocks = Math.min(yearsEmployed, Math.floor((myData.total_working_days || 0) / 300));
-          const totalEarned = (myData.manuel_hakedilen_izin || 0) + (earnedBlocks * 14);
+          const totalEarned = (myData.manuel_hakedilen_izin || 0) + (yearsEmployed * 14);
           const devreden = myData.devreden_yillik_izin || 0;
           const usedTotal = (myData.manuel_kullanilan_izin || 0) + (myData.used_leave || 0);
           const remaining = totalEarned + devreden - usedTotal;
@@ -483,11 +482,10 @@ export default function IzinTalepleri() {
       if (isNaN(yearsEmployed) || yearsEmployed < 0) yearsEmployed = 0;
       
       const totalDays = p.total_working_days || 0;
-      const earnedBlocks = Math.min(yearsEmployed, Math.floor(totalDays / 300));
       const manuelHakedilen = p.manuel_hakedilen_izin || 0;
       const manuelKullanilan = p.manuel_kullanilan_izin || 0;
       
-      const totalEarned = manuelHakedilen + (earnedBlocks * 14);
+      const totalEarned = manuelHakedilen + (yearsEmployed * 14);
       const devreden = p.devreden_yillik_izin || 0;
       const usedTotal = manuelKullanilan + (p.used_leave || 0);
       const remaining = totalEarned + devreden - usedTotal;
@@ -507,6 +505,10 @@ export default function IzinTalepleri() {
         manuelHakedilen,
         manuelKullanilan
       };
+    }).sort((a, b) => {
+      const nameA = `${a.isim || ""} ${a.soyisim || ""}`.trim().toUpperCase();
+      const nameB = `${b.isim || ""} ${b.soyisim || ""}`.trim().toUpperCase();
+      return nameA.localeCompare(nameB, "tr-TR");
     });
   }, [personelList, summaryData, summaryYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -748,45 +750,43 @@ export default function IzinTalepleri() {
       )}
 
       {/* Alt Sekme Butonları */}
-      {userProfile.is_admin && (
-        <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-          <button
-            onClick={() => setActiveSubTab("talepler")}
-            style={{
-              padding: "10px 20px",
-              fontSize: "14px",
-              fontWeight: "600",
-              backgroundColor: activeSubTab === "talepler" ? "#3b82f6" : "#f3f4f6",
-              color: activeSubTab === "talepler" ? "white" : "#374151",
-              border: "1px solid #d1d5db",
-              borderRadius: "8px",
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-          >
-            📋 İzin Talepleri
-          </button>
-          <button
-            onClick={() => setActiveSubTab("ozet")}
-            style={{
-              padding: "10px 20px",
-              fontSize: "14px",
-              fontWeight: "600",
-              backgroundColor: activeSubTab === "ozet" ? "#16a34a" : "#f3f4f6",
-              color: activeSubTab === "ozet" ? "white" : "#374151",
-              border: "1px solid #d1d5db",
-              borderRadius: "8px",
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-          >
-            📊 Yıllık İzin Özet Tablosu
-          </button>
-        </div>
-      )}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+        <button
+          onClick={() => setActiveSubTab("talepler")}
+          style={{
+            padding: "10px 20px",
+            fontSize: "14px",
+            fontWeight: "600",
+            backgroundColor: activeSubTab === "talepler" ? "#3b82f6" : "#f3f4f6",
+            color: activeSubTab === "talepler" ? "white" : "#374151",
+            border: "1px solid #d1d5db",
+            borderRadius: "8px",
+            cursor: "pointer",
+            transition: "all 0.2s",
+          }}
+        >
+          📋 İzin Talepleri
+        </button>
+        <button
+          onClick={() => setActiveSubTab("ozet")}
+          style={{
+            padding: "10px 20px",
+            fontSize: "14px",
+            fontWeight: "600",
+            backgroundColor: activeSubTab === "ozet" ? "#16a34a" : "#f3f4f6",
+            color: activeSubTab === "ozet" ? "white" : "#374151",
+            border: "1px solid #d1d5db",
+            borderRadius: "8px",
+            cursor: "pointer",
+            transition: "all 0.2s",
+          }}
+        >
+          📊 Yıllık İzin Özet Tablosu
+        </button>
+      </div>
 
       {/* ========== İZİN TALEPLERİ BÖLÜMÜ ========== */}
-      {(activeSubTab === "talepler" || !userProfile.is_admin) && (
+      {activeSubTab === "talepler" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           
           {/* Çalışan İçin Kalan İzin Kartı */}
@@ -804,7 +804,7 @@ export default function IzinTalepleri() {
               gap: "16px"
             }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: "16px", color: "#374151" }}>Yıllık İzin Bakiyeniz</h3>
+                <h3 style={{ margin: 0, fontSize: "16px", color: "#374151" }}>Kalan Yıllık İzin</h3>
                 <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
                   Hak Edilen: <b>{myLeaveSummary.totalEarned}</b> | Devreden: <b>{myLeaveSummary.devreden}</b> | Kullanılan: <b style={{ color: "red" }}>{myLeaveSummary.usedTotal}</b>
                 </div>
@@ -1174,7 +1174,7 @@ export default function IzinTalepleri() {
       )}
 
       {/* ========== YILLIK İZİN ÖZET TABLOSU ========== */}
-      {userProfile.is_admin && activeSubTab === "ozet" && (
+      {activeSubTab === "ozet" && (
         <div>
           <div style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -1184,27 +1184,29 @@ export default function IzinTalepleri() {
               📊 Yıllık İzin Özet Tablosu
             </h3>
             <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                {[
-                  { value: "aktif", label: "Aktif" },
-                  { value: "pasif", label: "Pasif" },
-                  { value: "tumu", label: "Tümü" },
-                ].map((f) => (
-                  <button
-                    key={f.value}
-                    onClick={() => setPersonelFilter(f.value)}
-                    style={{
-                      padding: "6px 12px", fontSize: "13px",
-                      backgroundColor: personelFilter === f.value ? "#16a34a" : "#f3f4f6",
-                      color: personelFilter === f.value ? "white" : "#374151",
-                      border: "1px solid #d1d5db", borderRadius: "6px",
-                      cursor: "pointer", fontWeight: "500", transition: "all 0.2s",
-                    }}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
+              {userProfile?.is_admin && (
+                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                  {[
+                    { value: "aktif", label: "Aktif" },
+                    { value: "pasif", label: "Pasif" },
+                    { value: "tumu", label: "Tümü" },
+                  ].map((f) => (
+                    <button
+                      key={f.value}
+                      onClick={() => setPersonelFilter(f.value)}
+                      style={{
+                        padding: "6px 12px", fontSize: "13px",
+                        backgroundColor: personelFilter === f.value ? "#16a34a" : "#f3f4f6",
+                        color: personelFilter === f.value ? "white" : "#374151",
+                        border: "1px solid #d1d5db", borderRadius: "6px",
+                        cursor: "pointer", fontWeight: "500", transition: "all 0.2s",
+                      }}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                 <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151" }}>Yıl:</label>
                 <select
@@ -1226,106 +1228,149 @@ export default function IzinTalepleri() {
           {summaryLoading ? (
             <div>Yükleniyor...</div>
           ) : (
-            <div style={{ overflowX: "auto", borderRadius: "4px", border: "2px solid #16a34a" }}>
-              <table style={{
-                width: "100%", borderCollapse: "collapse", fontSize: "13px",
-                minWidth: "1200px",
-              }}>
-                <thead>
-                  <tr>
-                    <th style={{
-                      padding: "10px 12px", textAlign: "left", fontWeight: "700",
-                      backgroundColor: "#dcfce7", color: "#166534",
-                      border: "1px solid #16a34a", whiteSpace: "nowrap",
-                      position: "sticky", left: 0, zIndex: 1, minWidth: "180px",
-                    }}>ADI SOYADI</th>
-                    <th style={{
-                      padding: "10px 8px", textAlign: "center", fontWeight: "700",
-                      backgroundColor: "#e0e7ff", color: "#3730a3",
-                      border: "1px solid #c7d2fe", whiteSpace: "nowrap",
-                    }} title="1 yıl kıdem + 300 gün işe gelme">HAK EDİLEN</th>
-                    <th style={{
-                      padding: "10px 8px", textAlign: "center", fontWeight: "700",
-                      backgroundColor: "#e0e7ff", color: "#3730a3",
-                      border: "1px solid #c7d2fe", whiteSpace: "nowrap",
-                    }}>DEVREDEN</th>
-                    <th style={{
-                      padding: "10px 8px", textAlign: "center", fontWeight: "700",
-                      backgroundColor: "#fee2e2", color: "#991b1b",
-                      border: "1px solid #fecaca", whiteSpace: "nowrap",
-                    }}>KULLANILAN</th>
-                    <th style={{
-                      padding: "10px 8px", textAlign: "center", fontWeight: "700",
-                      backgroundColor: "#d1fae5", color: "#065f46",
-                      border: "1px solid #a7f3d0", whiteSpace: "nowrap",
-                    }}>KALAN İZİN</th>
-                    {ayIsimleri.map((ay, i) => (
-                      <th key={i} style={{
-                        padding: "10px 8px", textAlign: "center", fontWeight: "700",
+            <>
+              <div style={{ overflowX: "auto", borderRadius: "4px", border: "2px solid #16a34a", marginBottom: "32px" }}>
+                <table style={{
+                  width: "100%", borderCollapse: "collapse", fontSize: "13px",
+                  minWidth: "600px",
+                }}>
+                  <thead>
+                    <tr>
+                      <th style={{
+                        padding: "10px 12px", textAlign: "left", fontWeight: "700",
                         backgroundColor: "#dcfce7", color: "#166534",
                         border: "1px solid #16a34a", whiteSpace: "nowrap",
-                        minWidth: "80px",
-                      }}>{ay}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {summaryRows.filter((row) => {
-                    if (personelFilter === "aktif") return row.aktif !== false;
-                    if (personelFilter === "pasif") return row.aktif === false;
-                    return true;
-                  }).map((row) => (
-                    <tr key={row.kullanici_id}>
-                      <td style={{
-                        padding: "8px 12px", fontWeight: "700", textAlign: "center",
-                        border: "1px solid #16a34a", backgroundColor: "#f0fdf4",
-                        color: row.aktif === false ? "#dc2626" : "#166534",
-                        whiteSpace: "nowrap", position: "sticky", left: 0, zIndex: 1,
-                      }}>
-                        {(row.isim || "").toUpperCase()} {(row.soyisim || "").toUpperCase()}
-                        <div style={{ fontSize: "11px", color: row.aktif === false ? "#fca5a5" : "#65a30d", fontWeight: "normal", marginTop: "4px" }}>
-                          (Toplam: {row.totalDays} Gün)
-                        </div>
-                      </td>
-                      <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #c7d2fe", backgroundColor: "#eef2ff", fontWeight: "600", color: "#3730a3", cursor: "pointer", textDecoration: "underline" }}
-                          onClick={() => handleEditHakedilen(row.kullanici_id, row.manuelHakedilen, row.isim, row.soyisim)}
-                          title="Önceki sistemden kazanılan izni manuel girmek/düzenlemek için tıklayın">
-                        {row.totalEarned}
-                      </td>
-                      <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #c7d2fe", backgroundColor: "#eef2ff", fontWeight: "600", color: "#2563eb", cursor: "pointer", textDecoration: "underline" }}
-                          onClick={() => handleEditDevreden(row.kullanici_id, row.devreden, row.isim, row.soyisim)}
-                          title="Geçmiş seneden devreden izni düzenlemek için tıklayın">
-                        {row.devreden}
-                      </td>
-                      <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #fecaca", backgroundColor: "#fef2f2", fontWeight: "600", color: "#991b1b", cursor: "pointer", textDecoration: "underline" }}
-                          onClick={() => handleEditKullanilan(row.kullanici_id, row.manuelKullanilan, row.isim, row.soyisim)}
-                          title="Önceki sistemde kullanılmış izni manuel girmek/düzenlemek için tıklayın">
-                        {row.usedTotal}
-                      </td>
-                      <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #a7f3d0", backgroundColor: "#ecfdf5", fontWeight: "bold", fontSize: "14px", color: "#064e3b" }}>
-                        {row.remaining}
-                      </td>
-                      {[1,2,3,4,5,6,7,8,9,10,11,12].map((ay) => {
-                        const m = row.months[ay];
-                        const content = renderCellContent(m);
-                        const hasData = content !== "";
-                        return (
-                          <td key={ay} style={{
-                            padding: "8px 6px", textAlign: "center",
-                            border: "1px solid #16a34a",
-                            backgroundColor: "#f0fdf4",
-                            color: "#374151", fontSize: "12px", fontWeight: hasData ? "600" : "normal",
-                            whiteSpace: "nowrap",
-                          }}>
-                            {content}
-                          </td>
-                        );
-                      })}
+                        position: "sticky", left: 0, zIndex: 1, minWidth: "180px",
+                      }}>ADI SOYADI</th>
+                      <th style={{
+                        padding: "10px 8px", textAlign: "center", fontWeight: "700",
+                        backgroundColor: "#e0e7ff", color: "#3730a3",
+                        border: "1px solid #c7d2fe", whiteSpace: "nowrap",
+                      }} title="Her 1 tam yıl kıdem = 14 gün">HAK EDİLEN</th>
+                      <th style={{
+                        padding: "10px 8px", textAlign: "center", fontWeight: "700",
+                        backgroundColor: "#e0e7ff", color: "#3730a3",
+                        border: "1px solid #c7d2fe", whiteSpace: "nowrap",
+                      }}>DEVREDEN</th>
+                      <th style={{
+                        padding: "10px 8px", textAlign: "center", fontWeight: "700",
+                        backgroundColor: "#fee2e2", color: "#991b1b",
+                        border: "1px solid #fecaca", whiteSpace: "nowrap",
+                      }}>KULLANILAN</th>
+                      <th style={{
+                        padding: "10px 8px", textAlign: "center", fontWeight: "700",
+                        backgroundColor: "#d1fae5", color: "#065f46",
+                        border: "1px solid #a7f3d0", whiteSpace: "nowrap",
+                      }}>KALAN İZİN</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {summaryRows.filter((row) => {
+                      if (!userProfile?.is_admin && row.kullanici_id !== userProfile?.kullanici_id) return false;
+                      if (userProfile?.is_admin && personelFilter === "aktif") return row.aktif !== false;
+                      if (userProfile?.is_admin && personelFilter === "pasif") return row.aktif === false;
+                      return true;
+                    }).map((row) => (
+                      <tr key={row.kullanici_id}>
+                        <td style={{
+                          padding: "8px 12px", fontWeight: "700", textAlign: "center",
+                          border: "1px solid #16a34a", backgroundColor: "#f0fdf4",
+                          color: row.aktif === false ? "#dc2626" : "#166534",
+                          whiteSpace: "nowrap", position: "sticky", left: 0, zIndex: 1,
+                        }}>
+                          {(row.isim || "").toUpperCase()} {(row.soyisim || "").toUpperCase()}
+                          <div style={{ fontSize: "11px", color: row.aktif === false ? "#fca5a5" : "#65a30d", fontWeight: "normal", marginTop: "4px" }}>
+                            (Toplam: {row.totalDays} Gün)
+                          </div>
+                        </td>
+                        <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #c7d2fe", backgroundColor: "#eef2ff", fontWeight: "600", color: "#3730a3", cursor: userProfile?.is_admin ? "pointer" : "auto", textDecoration: userProfile?.is_admin ? "underline" : "none" }}
+                            onClick={() => userProfile?.is_admin && handleEditHakedilen(row.kullanici_id, row.manuelHakedilen, row.isim, row.soyisim)}
+                            title={userProfile?.is_admin ? "Önceki sistemden kazanılan izni manuel girmek/düzenlemek için tıklayın" : "Hak Edilen İzin"}>
+                          {row.totalEarned}
+                        </td>
+                        <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #c7d2fe", backgroundColor: "#eef2ff", fontWeight: "600", color: "#2563eb", cursor: userProfile?.is_admin ? "pointer" : "auto", textDecoration: userProfile?.is_admin ? "underline" : "none" }}
+                            onClick={() => userProfile?.is_admin && handleEditDevreden(row.kullanici_id, row.devreden, row.isim, row.soyisim)}
+                            title={userProfile?.is_admin ? "Geçmiş seneden devreden izni düzenlemek için tıklayın" : "Devreden İzin"}>
+                          {row.devreden}
+                        </td>
+                        <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #fecaca", backgroundColor: "#fef2f2", fontWeight: "600", color: "#991b1b", cursor: userProfile?.is_admin ? "pointer" : "auto", textDecoration: userProfile?.is_admin ? "underline" : "none" }}
+                            onClick={() => userProfile?.is_admin && handleEditKullanilan(row.kullanici_id, row.manuelKullanilan, row.isim, row.soyisim)}
+                            title={userProfile?.is_admin ? "Önceki sistemde kullanılmış izni manuel girmek/düzenlemek için tıklayın" : "Kullanılan İzin"}>
+                          {row.usedTotal}
+                        </td>
+                        <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #a7f3d0", backgroundColor: "#ecfdf5", fontWeight: "bold", fontSize: "14px", color: "#064e3b" }}>
+                          {row.remaining}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <h4 style={{ margin: "0 0 16px 0", fontSize: "18px", color: "#166534", fontWeight: "700" }}>
+                🗓️ {summaryYear} Yılı Aylık İzin Kullanımları
+              </h4>
+              <div style={{ overflowX: "auto", borderRadius: "4px", border: "2px solid #16a34a" }}>
+                <table style={{
+                  width: "100%", borderCollapse: "collapse", fontSize: "13px",
+                  minWidth: "1200px",
+                }}>
+                  <thead>
+                    <tr>
+                      <th style={{
+                        padding: "10px 12px", textAlign: "left", fontWeight: "700",
+                        backgroundColor: "#dcfce7", color: "#166534",
+                        border: "1px solid #16a34a", whiteSpace: "nowrap",
+                        position: "sticky", left: 0, zIndex: 1, minWidth: "180px",
+                      }}>ADI SOYADI</th>
+                      {ayIsimleri.map((ay, i) => (
+                        <th key={i} style={{
+                          padding: "10px 8px", textAlign: "center", fontWeight: "700",
+                          backgroundColor: "#dcfce7", color: "#166534",
+                          border: "1px solid #16a34a", whiteSpace: "nowrap",
+                          minWidth: "80px",
+                        }}>{ay}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summaryRows.filter((row) => {
+                      if (!userProfile?.is_admin && row.kullanici_id !== userProfile?.kullanici_id) return false;
+                      if (userProfile?.is_admin && personelFilter === "aktif") return row.aktif !== false;
+                      if (userProfile?.is_admin && personelFilter === "pasif") return row.aktif === false;
+                      return true;
+                    }).map((row) => (
+                      <tr key={row.kullanici_id}>
+                        <td style={{
+                          padding: "8px 12px", fontWeight: "700", textAlign: "center",
+                          border: "1px solid #16a34a", backgroundColor: "#f0fdf4",
+                          color: row.aktif === false ? "#dc2626" : "#166534",
+                          whiteSpace: "nowrap", position: "sticky", left: 0, zIndex: 1,
+                        }}>
+                          {(row.isim || "").toUpperCase()} {(row.soyisim || "").toUpperCase()}
+                        </td>
+                        {[1,2,3,4,5,6,7,8,9,10,11,12].map((ay) => {
+                          const m = row.months[ay];
+                          const content = renderCellContent(m);
+                          const hasData = content !== "";
+                          return (
+                            <td key={ay} style={{
+                              padding: "8px 6px", textAlign: "center",
+                              border: "1px solid #16a34a",
+                              backgroundColor: "#f0fdf4",
+                              color: "#374151", fontSize: "12px", fontWeight: hasData ? "600" : "normal",
+                              whiteSpace: "nowrap",
+                            }}>
+                              {content}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}
