@@ -33,6 +33,7 @@ export default function IzinTalepleri() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [personelList, setPersonelList] = useState([]);
   const [personelFilter, setPersonelFilter] = useState("aktif"); // aktif, pasif, tumu
+  const [myLeaveSummary, setMyLeaveSummary] = useState(null);
 
   const izinTipleri = [
     { value: "ucretsiz_izin", label: "Ücretsiz İzin" },
@@ -107,6 +108,11 @@ export default function IzinTalepleri() {
   useEffect(() => {
     if (userProfile) {
       loadTalepler();
+      
+      // Normal kullanıcı ise kalan izin bilgisini çek
+      if (!userProfile.is_admin) {
+        loadMySummary();
+      }
     }
   }, [userProfile, filter, listMonth, listYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -299,16 +305,69 @@ export default function IzinTalepleri() {
     }
   }
 
+  async function loadMySummary() {
+    try {
+      const { data, error } = await supabase.rpc('get_personel_leave_summary');
+      if (!error && data) {
+        const myData = data.find(d => d.kullanici_id === userProfile.kullanici_id);
+        if (myData) {
+          const iseGiris = new Date(myData.ise_giris_tarihi);
+          let yearsEmployed = Math.floor(differenceInCalendarDays(new Date(), iseGiris) / 365.25);
+          if (isNaN(yearsEmployed) || yearsEmployed < 0) yearsEmployed = 0;
+          
+          const earnedBlocks = Math.min(yearsEmployed, Math.floor((myData.total_working_days || 0) / 300));
+          const totalEarned = earnedBlocks * 14;
+          const devreden = myData.devreden_yillik_izin || 0;
+          const usedTotal = myData.used_leave || 0;
+          const remaining = totalEarned + devreden - usedTotal;
+          
+          setMyLeaveSummary({
+            totalEarned,
+            devreden,
+            usedTotal,
+            remaining,
+            totalDays: myData.total_working_days || 0,
+            yearsEmployed
+          });
+        }
+      }
+    } catch(err) {
+      console.error("Kalan izin hesaplanırken hata:", err);
+    }
+  }
+
   // ---- Özet tablosu fonksiyonları ----
   async function loadPersonelList() {
     try {
-      const { data } = await supabase
-        .from("personel")
-        .select("kullanici_id, isim, soyisim, aktif")
-        .order("isim", { ascending: true });
+      const { data, error } = await supabase.rpc('get_personel_leave_summary');
+      if (error) throw error;
       setPersonelList(data || []);
     } catch (err) {
-      console.error("Personel listesi yükleme hatası:", err);
+      console.error("Personel listesi ve izin bilgileri yükleme hatası:", err);
+    }
+  }
+
+  async function handleEditDevreden(kullanici_id, mevcutDevreden, isim, soyisim) {
+    const adSoyad = `${isim} ${soyisim || ""}`.trim();
+    const newValStr = prompt(`${adSoyad} için geçmiş seneden devreden yıllık izin gün sayısını girin:\n(Mevcut: ${mevcutDevreden || 0})`, mevcutDevreden || 0);
+    if (newValStr === null) return;
+    
+    const newVal = parseInt(newValStr);
+    if (isNaN(newVal)) return alert("Lütfen geçerli bir sayı girin.");
+    
+    try {
+      const { error } = await supabase
+        .from("personel")
+        .update({ devreden_yillik_izin: newVal })
+        .eq("kullanici_id", kullanici_id);
+        
+      if (error) {
+        alert("Güncellenemedi: " + error.message);
+      } else {
+        loadPersonelList(); // Listeyi RPC'den tazelemek için
+      }
+    } catch(err) {
+      alert("Beklenmeyen hata: " + err.message);
     }
   }
 
@@ -376,13 +435,30 @@ export default function IzinTalepleri() {
 
         months[ay] = { yillik, raporlu, ucretsiz };
       });
+      
+      const iseGiris = new Date(p.ise_giris_tarihi);
+      let yearsEmployed = Math.floor(differenceInCalendarDays(new Date(), iseGiris) / 365.25);
+      if (isNaN(yearsEmployed) || yearsEmployed < 0) yearsEmployed = 0;
+      
+      const totalDays = p.total_working_days || 0;
+      const earnedBlocks = Math.min(yearsEmployed, Math.floor(totalDays / 300));
+      const totalEarned = earnedBlocks * 14;
+      const devreden = p.devreden_yillik_izin || 0;
+      const usedTotal = p.used_leave || 0;
+      const remaining = totalEarned + devreden - usedTotal;
 
       return {
         kullanici_id: p.kullanici_id,
         isim: p.isim,
         soyisim: p.soyisim,
-        aktif: p.aktif,
+        aktif: true, // RPC is only fetching active users right now based on our query
         months,
+        totalEarned,
+        devreden,
+        usedTotal,
+        remaining,
+        yearsEmployed,
+        totalDays
       };
     });
   }, [personelList, summaryData, summaryYear]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -664,7 +740,48 @@ export default function IzinTalepleri() {
 
       {/* ========== İZİN TALEPLERİ BÖLÜMÜ ========== */}
       {(activeSubTab === "talepler" || !userProfile.is_admin) && (
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          
+          {/* Çalışan İçin Kalan İzin Kartı */}
+          {!userProfile.is_admin && myLeaveSummary && (
+            <div style={{
+              padding: "16px",
+              backgroundColor: "white",
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+              flexWrap: "wrap",
+              gap: "16px"
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "16px", color: "#374151" }}>Yıllık İzin Bakiyeniz</h3>
+                <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
+                  Hak Edilen: <b>{myLeaveSummary.totalEarned}</b> | Devreden: <b>{myLeaveSummary.devreden}</b> | Kullanılan: <b style={{ color: "red" }}>{myLeaveSummary.usedTotal}</b>
+                </div>
+                <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "2px" }}>
+                  Fiili çalışma günü: {myLeaveSummary.totalDays} | Kıdem: {myLeaveSummary.yearsEmployed} Yıl
+                </div>
+              </div>
+              <div style={{
+                backgroundColor: myLeaveSummary.remaining > 0 ? "#ecfdf5" : "#fef2f2",
+                border: `2px solid ${myLeaveSummary.remaining > 0 ? "#10b981" : "#ef4444"}`,
+                borderRadius: "8px",
+                padding: "12px 24px",
+                textAlign: "center"
+              }}>
+                <div style={{ fontSize: "12px", fontWeight: "600", color: myLeaveSummary.remaining > 0 ? "#059669" : "#b91c1c", textTransform: "uppercase" }}>
+                  Kalan İzin
+                </div>
+                <div style={{ fontSize: "24px", fontWeight: "800", color: myLeaveSummary.remaining > 0 ? "#047857" : "#991b1b" }}>
+                  {myLeaveSummary.remaining} <span style={{ fontSize: "14px", fontWeight: "normal" }}>Gün</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Filtre */}
           <div style={{ marginBottom: "16px", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -1075,6 +1192,26 @@ export default function IzinTalepleri() {
                       border: "1px solid #16a34a", whiteSpace: "nowrap",
                       position: "sticky", left: 0, zIndex: 1, minWidth: "180px",
                     }}>ADI SOYADI</th>
+                    <th style={{
+                      padding: "10px 8px", textAlign: "center", fontWeight: "700",
+                      backgroundColor: "#e0e7ff", color: "#3730a3",
+                      border: "1px solid #c7d2fe", whiteSpace: "nowrap",
+                    }} title="1 yıl kıdem + 300 gün işe gelme">HAK EDİLEN</th>
+                    <th style={{
+                      padding: "10px 8px", textAlign: "center", fontWeight: "700",
+                      backgroundColor: "#e0e7ff", color: "#3730a3",
+                      border: "1px solid #c7d2fe", whiteSpace: "nowrap",
+                    }}>DEVREDEN</th>
+                    <th style={{
+                      padding: "10px 8px", textAlign: "center", fontWeight: "700",
+                      backgroundColor: "#fee2e2", color: "#991b1b",
+                      border: "1px solid #fecaca", whiteSpace: "nowrap",
+                    }}>KULLANILAN</th>
+                    <th style={{
+                      padding: "10px 8px", textAlign: "center", fontWeight: "700",
+                      backgroundColor: "#d1fae5", color: "#065f46",
+                      border: "1px solid #a7f3d0", whiteSpace: "nowrap",
+                    }}>KALAN İZİN</th>
                     {ayIsimleri.map((ay, i) => (
                       <th key={i} style={{
                         padding: "10px 8px", textAlign: "center", fontWeight: "700",
@@ -1099,6 +1236,20 @@ export default function IzinTalepleri() {
                         whiteSpace: "nowrap", position: "sticky", left: 0, zIndex: 1,
                       }}>
                         {(row.isim || "").toUpperCase()} {(row.soyisim || "").toUpperCase()}
+                      </td>
+                      <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #c7d2fe", backgroundColor: "#eef2ff", fontWeight: "600", color: "#3730a3" }}>
+                        {row.totalEarned}
+                      </td>
+                      <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #c7d2fe", backgroundColor: "#eef2ff", fontWeight: "600", color: "#2563eb", cursor: "pointer", textDecoration: "underline" }}
+                          onClick={() => handleEditDevreden(row.kullanici_id, row.devreden, row.isim, row.soyisim)}
+                          title="Geçmiş seneden devreden izni düzenlemek için tıklayın">
+                        {row.devreden}
+                      </td>
+                      <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #fecaca", backgroundColor: "#fef2f2", fontWeight: "600", color: "#991b1b" }}>
+                        {row.usedTotal}
+                      </td>
+                      <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #a7f3d0", backgroundColor: "#ecfdf5", fontWeight: "bold", fontSize: "14px", color: "#064e3b" }}>
+                        {row.remaining}
                       </td>
                       {[1,2,3,4,5,6,7,8,9,10,11,12].map((ay) => {
                         const m = row.months[ay];
