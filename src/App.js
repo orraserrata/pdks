@@ -34,6 +34,7 @@ function App() {
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
   const [passwordResetError, setPasswordResetError] = useState('');
   const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   async function fetchPersoneller() {
     const { data, error } = await supabase
@@ -300,10 +301,13 @@ function App() {
             <h1 className="appTitle">PDKS</h1>
           </div>
           <div className="toolbar-center">
-            <div className="tabs">
+            <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+              {isMobileMenuOpen ? "✖ Menüyü Kapat" : "☰ Menü"}
+            </button>
+            <div className={`tabs ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
               <button
                 className={`tab ${activeTab === 'calisanlar' ? 'tab-active' : ''}`}
-                onClick={() => setActiveTab('calisanlar')}
+                onClick={() => { setActiveTab('calisanlar'); setIsMobileMenuOpen(false); }}
               >
                 Çalışanlar
               </button>
@@ -312,23 +316,23 @@ function App() {
                 <>
                   <button
                     className={`tab ${activeTab === 'personel' ? 'tab-active' : ''}`}
-                    onClick={() => setActiveTab('personel')}
+                    onClick={() => { setActiveTab('personel'); setIsMobileMenuOpen(false); }}
                   >
                     Personel Yönetimi
                   </button>
                   <button
                     className={`tab ${activeTab === 'tumCalisanlar' ? 'tab-active' : ''}`}
-                    onClick={() => setActiveTab('tumCalisanlar')}
+                    onClick={() => { setActiveTab('tumCalisanlar'); setIsMobileMenuOpen(false); }}
                   >
                     Tüm Çalışanlar
                   </button>
                   <button
                     className={`tab ${activeTab === 'maasHesabi' ? 'tab-active' : ''}`}
-                    onClick={() => setActiveTab('maasHesabi')}
+                    onClick={() => { setActiveTab('maasHesabi'); setIsMobileMenuOpen(false); }}
                   >
                     Maaş Hesabı
                   </button>
-                  <button className={`tab ${activeTab === 'admin' ? 'tab-active' : ''}`} onClick={() => setActiveTab('admin')}>Admin</button>
+                  <button className={`tab ${activeTab === 'admin' ? 'tab-active' : ''}`} onClick={() => { setActiveTab('admin'); setIsMobileMenuOpen(false); }}>Admin</button>
                 </>
               )}
               
@@ -336,7 +340,7 @@ function App() {
               {!userProfile?.is_admin && (
                 <button 
                   className={`tab ${activeTab === 'maasim' ? 'tab-active' : ''}`} 
-                  onClick={() => setActiveTab('maasim')}
+                  onClick={() => { setActiveTab('maasim'); setIsMobileMenuOpen(false); }}
                 >
                   Maaşım
                 </button>
@@ -345,14 +349,14 @@ function App() {
               {/* İzin Talepleri - hem normal kullanıcılar hem admin kullanıcılar görebilir */}
               <button 
                 className={`tab ${activeTab === 'izinTalepleri' ? 'tab-active' : ''}`} 
-                onClick={() => setActiveTab('izinTalepleri')}
+                onClick={() => { setActiveTab('izinTalepleri'); setIsMobileMenuOpen(false); }}
               >
                 İzin Talepleri
               </button>
               {/* Hata Bildirimleri - hem normal kullanıcılar hem admin kullanıcılar görebilir */}
               <button 
                 className={`tab ${activeTab === 'hataBildirimleri' ? 'tab-active' : ''}`} 
-                onClick={() => setActiveTab('hataBildirimleri')}
+                onClick={() => { setActiveTab('hataBildirimleri'); setIsMobileMenuOpen(false); }}
               >
                 Hata Bildirimleri
               </button>

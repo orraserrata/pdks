@@ -52,23 +52,44 @@
   }
   
   .toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
   }
   
   .toolbar-center {
-    order: 2;
+    width: 100%;
+    order: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
   
   .toolbar-right {
-    order: 3;
+    order: 2;
+    display: flex;
     justify-content: center;
   }
   
   .tabs {
-    flex-wrap: wrap;
-    justify-content: center;
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    gap: 4px;
+    margin-top: 10px;
+  }
+
+  .tabs.mobile-open {
+    display: flex;
+    animation: slideDown 0.3s ease;
+  }
+  
+  .tab {
+    width: 100%;
+    text-align: center;
+    padding: 12px;
   }
   
   .container {
@@ -79,6 +100,30 @@
     font-size: 20px;
     justify-content: center;
   }
+}
+
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: 1px solid #d1d5db;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 8px;
+  color: #374151;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: block;
+    width: 100%;
+  }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .card {
@@ -175,5 +220,48 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Mobil form ve dokunmatik hedef optimizasyonları */
+@media (max-width: 768px) {
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  /* Flex wrap ile yan yana dizilen form öğelerini dikey stack'e çevirir */
+  form > div[style*="flexWrap"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  form > div[style*="flexWrap"] > div {
+    width: 100% !important;
+    min-width: 100% !important;
+    flex: none !important;
+    margin-bottom: 8px;
+  }
+
+  /* Input'ların taşmasını engelle */
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    min-width: 100% !important;
+  }
+
+  /* Butonlar için min 44px dokunmatik hedef (Apple Human Interface Guidelines) */
+  button, .mobile-menu-btn {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Modal responsive ayarı */
+  .modal-content {
+    padding: 16px !important;
+    width: 95% !important;
   }
 }
