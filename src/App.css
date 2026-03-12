@@ -264,4 +264,31 @@
     padding: 16px !important;
     width: 95% !important;
   }
+  
+  /* ---- KAPSAMLI MOBIL OPTIMIZASYON SINIFLARI ---- */
+  
+  /* Standart div taşıyıcılarını mobilde dikey akıtmak için: */
+  .responsive-flex {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  
+  /* Eğer içindeki elemanların yan yana değil de alt alta ve %100 sığmasını istiyorsak */
+  .responsive-flex > div,
+  .responsive-flex > button,
+  .responsive-flex > input,
+  .responsive-flex > select {
+    width: 100% !important;
+  }
+  
+  /* Flex olan ve wrap özelliği eklenmemiş toolbar alanlarını mecburi wrap yapar */
+  .force-wrap {
+    flex-wrap: wrap !important;
+  }
+  
+  /* Kart tasarımı olan div'lerin boşluğunu (padding) küçültür */
+  .card, div[style*="backgroundColor: '#f8fafc'"], div[style*="backgroundColor: \"#f8fafc\""] {
+    padding: 12px !important;
+  }
 }

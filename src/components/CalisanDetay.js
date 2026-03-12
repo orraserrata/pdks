@@ -159,12 +159,11 @@ function CalisanDetay({ calisan }) {
           : `Kullanıcı ${calisan.kullanici_id ?? calisan.id}`} Çalışma Saatleri
       </h2>
 
-      <div style={{ 
+      <div className="responsive-flex" style={{ 
         display: "flex", 
         gap: "16px", 
         marginBottom: "20px", 
         alignItems: "center",
-        padding: "16px",
         backgroundColor: "#f8fafc",
         borderRadius: "8px",
         border: "1px solid #e2e8f0"
@@ -508,7 +507,7 @@ function CalisanDetay({ calisan }) {
         onClose={() => setEditing(null)}
         title="Saatleri Düzenle"
       >
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+        <div className="responsive-flex" style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
           <label>
             Giriş
             <input

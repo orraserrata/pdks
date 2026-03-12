@@ -273,7 +273,7 @@ export default function HataBildirimleriListesi() {
     <div>
       <h2>Hata Bildirimleri</h2>
       
-      <div style={{ marginBottom: "16px", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+      <div className="responsive-flex" style={{ marginBottom: "16px", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
         <div>
           <label style={{ marginRight: "8px", fontWeight: "bold", fontSize: "14px" }}>Ay:</label>
           <select
@@ -322,7 +322,7 @@ export default function HataBildirimleriListesi() {
 
       {/* Toplu Islem Cubugu - Sadece Admin */}
       {userProfile?.is_admin && selectedIds.length > 0 && (
-        <div style={{
+        <div className="responsive-flex" style={{
           marginBottom: "12px",
           padding: "12px 16px",
           backgroundColor: "#eff6ff",

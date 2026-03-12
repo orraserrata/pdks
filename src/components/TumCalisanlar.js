@@ -213,38 +213,39 @@ function TumCalisanlar() {
         </button>
       </div>
 
-      <div style={{ marginBottom: "20px" }}>
-        <label>
-          Başlangıç:
+      <div className="responsive-flex" style={{ display: "flex", gap: "12px", alignItems: "flex-end", flexWrap: "wrap", marginBottom: "20px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151" }}>Başlangıç:</label>
           <input 
             type="date" 
             value={baslangic} 
             onChange={(e) => setBaslangic(e.target.value)}
-            style={{ marginLeft: "10px", marginRight: "20px" }}
+            style={{ padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: "6px" }}
           />
-        </label>
-        <label>
-          Bitiş:
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151" }}>Bitiş:</label>
           <input 
             type="date" 
             value={bitis} 
             onChange={(e) => setBitis(e.target.value)}
-            style={{ marginLeft: "10px" }}
+            style={{ padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: "6px" }}
           />
-        </label>
+        </div>
         <button 
           onClick={handlePrint}
           style={{ 
-            marginLeft: "20px", 
-            padding: "8px 16px", 
+            padding: "10px 16px", 
             backgroundColor: "#007bff", 
             color: "white", 
             border: "none", 
-            borderRadius: "4px", 
-            cursor: "pointer" 
+            borderRadius: "6px", 
+            cursor: "pointer",
+            fontWeight: "600",
+            minHeight: "44px"
           }}
         >
-          Yazdır
+          🖨️ Yazdır
         </button>
       </div>
 

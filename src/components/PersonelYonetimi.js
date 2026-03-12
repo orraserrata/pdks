@@ -356,7 +356,7 @@ export default function PersonelYonetimi({ onChanged }) {
         <>
                      {/* Personel Ekleme Formu - Sadece Admin */}
            {userProfile && userProfile.is_admin && (
-            <form onSubmit={handleSubmit} style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <form onSubmit={handleSubmit} className="responsive-flex" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
             <label>
               Kullanıcı ID
               <input
@@ -420,7 +420,7 @@ export default function PersonelYonetimi({ onChanged }) {
           {error && <div style={{ color: "red", marginTop: 8 }}>{error}</div>}
 
           {/* Filtreleme Butonları */}
-          <div style={{ marginTop: "20px", display: "flex", gap: "8px", alignItems: "center" }}>
+          <div className="force-wrap" style={{ marginTop: "20px", display: "flex", gap: "8px", alignItems: "center" }}>
             <span style={{ fontSize: "14px", fontWeight: "500", color: "#374151" }}>Personel Durumu:</span>
             <button
               onClick={() => setFilter("active")}
