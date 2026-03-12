@@ -189,10 +189,16 @@ export default function HataBildirimleriListesi() {
   }
 
   function toggleSelectAll() {
-    if (selectedIds.length === bildirimler.length) {
+    const selectableBildirimler = bildirimler.filter(
+      b => b.durum !== "cozuldu" && b.durum !== "reddedildi"
+    );
+    
+    if (selectableBildirimler.length === 0) return;
+
+    if (selectedIds.length === selectableBildirimler.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(bildirimler.map((b) => b.id));
+      setSelectedIds(selectableBildirimler.map((b) => b.id));
     }
   }
 
@@ -363,9 +369,16 @@ export default function HataBildirimleriListesi() {
                   }}>
                     <input
                       type="checkbox"
-                      checked={bildirimler.length > 0 && selectedIds.length === bildirimler.length}
+                      disabled={bildirimler.filter(b => b.durum !== "cozuldu" && b.durum !== "reddedildi").length === 0}
+                      checked={
+                        bildirimler.filter(b => b.durum !== "cozuldu" && b.durum !== "reddedildi").length > 0 &&
+                        selectedIds.length === bildirimler.filter(b => b.durum !== "cozuldu" && b.durum !== "reddedildi").length
+                      }
                       onChange={toggleSelectAll}
-                      style={{ cursor: "pointer", width: "16px", height: "16px" }}
+                      style={{ 
+                        cursor: bildirimler.filter(b => b.durum !== "cozuldu" && b.durum !== "reddedildi").length === 0 ? "not-allowed" : "pointer", 
+                        width: "16px", height: "16px" 
+                      }}
                     />
                   </th>
                 )}
@@ -440,7 +453,12 @@ export default function HataBildirimleriListesi() {
                         type="checkbox"
                         checked={selectedIds.includes(bildirim.id)}
                         onChange={() => toggleSelect(bildirim.id)}
-                        style={{ cursor: "pointer", width: "16px", height: "16px" }}
+                        disabled={bildirim.durum === "cozuldu" || bildirim.durum === "reddedildi"}
+                        style={{ 
+                          cursor: (bildirim.durum === "cozuldu" || bildirim.durum === "reddedildi") ? "not-allowed" : "pointer", 
+                          width: "16px", height: "16px",
+                          opacity: (bildirim.durum === "cozuldu" || bildirim.durum === "reddedildi") ? 0.4 : 1
+                        }}
                       />
                     </td>
                   )}
