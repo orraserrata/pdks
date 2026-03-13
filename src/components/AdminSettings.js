@@ -81,7 +81,7 @@ export default function AdminSettings() {
   return (
     <div>
       <h3>Admin Yönetimi</h3>
-      <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+      <div className="responsive-flex" style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
         <button disabled={loading} onClick={bootstrapSelf}>İlk admin olarak kendimi ata</button>
         <label>
           E-posta ile admin ekle
@@ -92,26 +92,28 @@ export default function AdminSettings() {
 
       {error && <div style={{ color: "red", marginTop: 8 }}>{error}</div>}
 
-      <table border="1" style={{ marginTop: 12, borderCollapse: "collapse", width: "100%" }}>
-        <thead>
-          <tr>
-            <th>E-posta</th>
-            <th>Kullanıcı ID</th>
-            <th>İşlem</th>
-          </tr>
-        </thead>
-        <tbody>
-          {admins.map((a) => (
-            <tr key={a.user_id}>
-              <td>{a.email}</td>
-              <td>{a.user_id}</td>
-              <td>
-                <button disabled={loading} onClick={() => removeAdmin(a.email)}>Kaldır</button>
-              </td>
+      <div className="mobile-scroll-wrap" style={{ marginTop: 12 }}>
+        <table border="1" className="mobile-scroll-table" style={{ borderCollapse: "collapse", width: "100%" }}>
+          <thead>
+            <tr>
+              <th>E-posta</th>
+              <th>Kullanıcı ID</th>
+              <th>İşlem</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {admins.map((a) => (
+              <tr key={a.user_id}>
+                <td>{a.email}</td>
+                <td>{a.user_id}</td>
+                <td>
+                  <button disabled={loading} onClick={() => removeAdmin(a.email)}>Kaldır</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

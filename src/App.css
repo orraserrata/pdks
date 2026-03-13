@@ -292,3 +292,102 @@
     padding: 12px !important;
   }
 }
+
+/* ------------------------------------------------------------------
+   PROFESSIONAL MOBILE TABLE (CARD VIEW)
+   ------------------------------------------------------------------ */
+@media (max-width: 768px) {
+  .mobile-table {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .mobile-table thead {
+    display: none !important;
+  }
+  .mobile-table tfoot {
+    display: none !important;
+  }
+  .mobile-table tr {
+    display: block !important;
+    margin-bottom: 20px !important;
+    background: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+    overflow: hidden !important;
+  }
+  .mobile-table td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 14px 16px !important;
+    text-align: right !important;
+    border-bottom: 1px solid #f3f4f6 !important;
+    font-size: 14px !important;
+  }
+  .mobile-table td:last-child {
+    border-bottom: 0 !important;
+    background-color: #f8fafc !important; /* Hafif bir arka plan efekti işlem satırları için */
+    justify-content: flex-end !important;
+  }
+  /* data-label ile sol tarafa başlıkları bas */
+  .mobile-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #4b5563;
+    text-align: left;
+    margin-right: auto; /* Değeri sağa iter */
+    padding-right: 16px;
+    white-space: nowrap;
+  }
+
+  .mobile-table td:not([data-label])::before {
+    content: none;
+  }
+}
+
+/* Yatay kaydırmalı tablo: data-label olmayan geniş tablolar için */
+.mobile-scroll-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-scroll-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+@media (max-width: 768px) {
+  .mobile-scroll-wrap {
+    margin: 0 -6px;
+    padding: 0 6px 8px;
+  }
+
+  .mobile-scroll-table {
+    min-width: 640px;
+    font-size: 13px;
+  }
+
+  .mobile-scroll-table th,
+  .mobile-scroll-table td {
+    white-space: nowrap;
+  }
+
+  .mobile-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mobile-list-item {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px 12px;
+    word-break: break-word;
+  }
+}

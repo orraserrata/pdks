@@ -200,13 +200,13 @@ function CalisanDetay({ calisan }) {
         </div>
       </div>
 
-      <div style={{ 
+      <div className="mobile-scroll-wrap" style={{ 
         overflowX: "auto", 
         borderRadius: "8px", 
         border: "1px solid #e5e7eb",
         boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)"
       }}>
-        <table style={{ 
+        <table className="mobile-scroll-table" style={{ 
           width: "100%", 
           borderCollapse: "collapse",
           backgroundColor: "white"
@@ -355,7 +355,7 @@ function CalisanDetay({ calisan }) {
                 {session && userProfile && userProfile.is_admin && (
                   <td style={{ padding: "16px 12px" }}>
                     {row ? (
-                      <div style={{ display: "flex", gap: "8px" }}>
+                      <div className="responsive-flex" style={{ display: "flex", gap: "8px" }}>
                         <button 
                           onClick={() => {
                           setEditing(row);

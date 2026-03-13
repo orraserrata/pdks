@@ -275,7 +275,7 @@ const MaasHesabi = () => {
       
       {/* Alt Sekmeler */}
       <div style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', gap: '10px', borderBottom: '1px solid #ddd' }}>
+        <div className="responsive-flex" style={{ display: 'flex', gap: '10px', borderBottom: '1px solid #ddd' }}>
           <button
             onClick={() => setActiveSubTab('raporlar')}
             style={{
@@ -311,7 +311,7 @@ const MaasHesabi = () => {
       {activeSubTab === 'raporlar' && (
         <div>
           {/* Ay/Yıl Seçimi */}
-          <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div className="responsive-flex" style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
             <label>
               Ay:
               <select 
@@ -365,8 +365,8 @@ const MaasHesabi = () => {
             {loading ? (
               <p>Yükleniyor...</p>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table id="maas-raporu-tablosu" style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ddd' }}>
+              <div className="mobile-scroll-wrap" style={{ overflowX: 'auto' }}>
+                <table id="maas-raporu-tablosu" className="mobile-scroll-table" style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ddd' }}>
                   <thead>
                     <tr style={{ backgroundColor: '#f5f5f5' }}>
                       <th style={{ border: '1px solid #ddd', padding: '8px' }}>Kullanıcı ID</th>
@@ -451,7 +451,7 @@ const MaasHesabi = () => {
                 backgroundColor: '#f9f9f9'
               }}>
                 <h4>Yeni Maaş Ayarı Ekle</h4>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="responsive-flex" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <div>
                     <label>Personel:</label>
                     <select
@@ -534,8 +534,8 @@ const MaasHesabi = () => {
             )}
 
             {/* Maaş Ayarları Tablosu */}
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ddd' }}>
+            <div className="mobile-scroll-wrap" style={{ overflowX: 'auto' }}>
+              <table className="mobile-scroll-table" style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ddd' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#f5f5f5' }}>
                     <th style={{ border: '1px solid #ddd', padding: '8px' }}>Kullanıcı ID</th>

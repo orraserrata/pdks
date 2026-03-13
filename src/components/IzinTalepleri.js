@@ -627,7 +627,7 @@ export default function IzinTalepleri() {
             Yeni İzin Talebi
           </h3>
           <form onSubmit={handleSubmit}>
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div className="responsive-flex" style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "flex-end" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151" }}>İzin Tipi *</label>
                 <select
@@ -750,7 +750,7 @@ export default function IzinTalepleri() {
       )}
 
       {/* Alt Sekme Butonları */}
-      <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+      <div className="responsive-flex" style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
         <button
           onClick={() => setActiveSubTab("talepler")}
           style={{
@@ -830,7 +830,7 @@ export default function IzinTalepleri() {
           )}
 
           {/* Filtre */}
-          <div style={{ marginBottom: "16px", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+          <div className="responsive-flex" style={{ marginBottom: "16px", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span style={{ fontSize: "14px", fontWeight: "500", color: "#374151" }}>Ay:</span>
               <select
@@ -963,13 +963,13 @@ export default function IzinTalepleri() {
               {filter === "tumu" ? "Henüz izin talebi yok." : `${getDurumLabel(filter)} durumunda talep yok.`}
             </div>
           ) : (
-            <div style={{
+            <div className="mobile-scroll-wrap" style={{
               overflowX: "auto",
               borderRadius: "8px",
               border: "1px solid #e5e7eb",
               boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
             }}>
-              <table style={{
+              <table className="mobile-scroll-table" style={{
                 width: "100%",
                 borderCollapse: "collapse",
                 backgroundColor: "white",
@@ -1229,8 +1229,8 @@ export default function IzinTalepleri() {
             <div>Yükleniyor...</div>
           ) : (
             <>
-              <div style={{ overflowX: "auto", borderRadius: "4px", border: "2px solid #16a34a", marginBottom: "32px" }}>
-                <table style={{
+              <div className="mobile-scroll-wrap" style={{ overflowX: "auto", borderRadius: "4px", border: "2px solid #16a34a", marginBottom: "32px" }}>
+                <table className="mobile-scroll-table" style={{
                   width: "100%", borderCollapse: "collapse", fontSize: "13px",
                   minWidth: "600px",
                 }}>
@@ -1310,8 +1310,8 @@ export default function IzinTalepleri() {
               <h4 style={{ margin: "0 0 16px 0", fontSize: "18px", color: "#166534", fontWeight: "700" }}>
                 🗓️ {summaryYear} Yılı Aylık İzin Kullanımları
               </h4>
-              <div style={{ overflowX: "auto", borderRadius: "4px", border: "2px solid #16a34a" }}>
-                <table style={{
+              <div className="mobile-scroll-wrap" style={{ overflowX: "auto", borderRadius: "4px", border: "2px solid #16a34a" }}>
+                <table className="mobile-scroll-table" style={{
                   width: "100%", borderCollapse: "collapse", fontSize: "13px",
                   minWidth: "1200px",
                 }}>

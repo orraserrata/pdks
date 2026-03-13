@@ -384,13 +384,13 @@ export default function HataBildirimleriListesi() {
           {filter === "tumu" ? "Henüz hata bildirimi yok." : `${getDurumLabel(filter)} durumunda bildirim yok.`}
         </div>
       ) : (
-        <div style={{ 
+        <div className="mobile-scroll-wrap" style={{ 
           overflowX: "auto", 
           borderRadius: "8px", 
           border: "1px solid #e5e7eb",
           boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)"
         }}>
-          <table style={{ 
+          <table className="mobile-scroll-table" style={{ 
             width: "100%", 
             borderCollapse: "collapse",
             backgroundColor: "white",
@@ -581,7 +581,7 @@ export default function HataBildirimleriListesi() {
                       fontSize: "14px", 
                       color: "#374151"
                     }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <div className="responsive-flex" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                       {bildirim.durum === "beklemede" && (
                         <>
                           <button

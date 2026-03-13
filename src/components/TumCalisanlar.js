@@ -249,7 +249,7 @@ function TumCalisanlar() {
         </button>
       </div>
 
-      <table border="1" style={{ width: "100%", borderCollapse: "collapse" }}>
+      <table border="1" className="mobile-table" style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
             <th>Sıra</th>
@@ -265,10 +265,10 @@ function TumCalisanlar() {
             const detay = calisanDetaylari[calisan.kullanici_id] || { toplamSure: "0.00", kayitSayisi: 0 };
             return (
               <tr key={calisan.kullanici_id}>
-                <td>{index + 1}</td>
-                <td>{(calisan.isim || "")} {(calisan.soyisim || "")}</td>
-                <td>{calisan.kullanici_id}</td>
-                <td>
+                <td data-label="Sıra">{index + 1}</td>
+                <td data-label="Ad Soyad">{(calisan.isim || "")} {(calisan.soyisim || "")}</td>
+                <td data-label="Kullanıcı ID">{calisan.kullanici_id}</td>
+                <td data-label="Durum">
                   <span style={{
                     padding: "4px 8px",
                     borderRadius: "4px",
@@ -280,8 +280,8 @@ function TumCalisanlar() {
                     {calisan.aktif ? "Aktif" : "Pasif"}
                   </span>
                 </td>
-                <td>{detay.toplamSure}</td>
-                <td>{detay.kayitSayisi}</td>
+                <td data-label="Toplam Süre (Saat)">{detay.toplamSure}</td>
+                <td data-label="İşe Gelinen Gün">{detay.kayitSayisi}</td>
               </tr>
             );
           })}

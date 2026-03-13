@@ -474,7 +474,7 @@ export default function PersonelYonetimi({ onChanged }) {
 
           {/* Personel Listesi */}
           <div style={{ marginTop: "20px" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", backgroundColor: "white", borderRadius: "8px", overflow: "hidden", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)" }}>
+            <table className="mobile-table" style={{ width: "100%", borderCollapse: "collapse", backgroundColor: "white", borderRadius: "8px", overflow: "hidden", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)" }}>
               <thead>
                 <tr style={{ backgroundColor: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
                   <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>Kullanıcı ID</th>
@@ -490,11 +490,11 @@ export default function PersonelYonetimi({ onChanged }) {
               <tbody>
                 {personeller.map((p) => (
                   <tr key={p.kullanici_id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                    <td style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>{p.kullanici_id}</td>
-                    <td style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>{p.isim}</td>
-                    <td style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>{p.soyisim}</td>
-                    <td style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>{p.ise_giris_tarihi}</td>
-                    <td style={{ padding: "12px 16px", fontSize: "14px" }}>
+                    <td data-label="Kullanıcı ID" style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>{p.kullanici_id}</td>
+                    <td data-label="İsim" style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>{p.isim}</td>
+                    <td data-label="Soyisim" style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>{p.soyisim}</td>
+                    <td data-label="İşe Giriş Tarihi" style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>{p.ise_giris_tarihi}</td>
+                    <td data-label="Durum" style={{ padding: "12px 16px", fontSize: "14px" }}>
                       <span style={{
                         padding: "4px 8px",
                         borderRadius: "4px",
@@ -507,9 +507,10 @@ export default function PersonelYonetimi({ onChanged }) {
                       </span>
                     </td>
                     {userProfile && userProfile.is_admin && (
-                      <td style={{ padding: "12px 16px", fontSize: "14px" }}>
+                      <td data-label="İşlemler" style={{ padding: "12px 16px", fontSize: "14px" }}>
+                      <div className="force-wrap" style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
                       {editingId === p.kullanici_id ? (
-                        <form onSubmit={handleEditSubmit} style={{ display: "flex", gap: "4px" }}>
+                        <form onSubmit={handleEditSubmit} style={{ display: "flex", gap: "4px", flexWrap: "wrap", justifyContent: "flex-end" }}>
                           <input
                             type="text"
                             value={editForm.isim}
@@ -657,6 +658,7 @@ export default function PersonelYonetimi({ onChanged }) {
                           </button>
                         </>
                       )}
+                      </div>
                       </td>
                     )}
                   </tr>
@@ -679,7 +681,7 @@ export default function PersonelYonetimi({ onChanged }) {
               overflow: "hidden",
               boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)"
             }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <table className="mobile-table" style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ backgroundColor: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
                     <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>
@@ -708,19 +710,19 @@ export default function PersonelYonetimi({ onChanged }) {
                 <tbody>
                   {kullaniciProfilleri.map((profile) => (
                     <tr key={profile.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                      <td style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>
+                      <td data-label="E-posta" style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>
                         {profile.email}
                       </td>
-                      <td style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>
+                      <td data-label="İsim" style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>
                         {profile.isim || "-"}
                       </td>
-                      <td style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>
+                      <td data-label="Soyisim" style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>
                         {profile.soyisim || "-"}
                       </td>
-                      <td style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>
+                      <td data-label="Kullanıcı ID" style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>
                         {profile.kullanici_id}
                       </td>
-                      <td style={{ padding: "12px 16px", fontSize: "14px" }}>
+                      <td data-label="Admin" style={{ padding: "12px 16px", fontSize: "14px" }}>
                         <span style={{
                           padding: "4px 8px",
                           borderRadius: "4px",
@@ -732,10 +734,10 @@ export default function PersonelYonetimi({ onChanged }) {
                           {profile.is_admin ? "Admin" : "Kullanıcı"}
                         </span>
                       </td>
-                      <td style={{ padding: "12px 16px", fontSize: "14px", color: "#6b7280" }}>
+                      <td data-label="Kayıt Tarihi" style={{ padding: "12px 16px", fontSize: "14px", color: "#6b7280" }}>
                         {new Date(profile.created_at).toLocaleDateString('tr-TR')}
                       </td>
-                      <td style={{ padding: "12px 16px", fontSize: "14px" }}>
+                      <td data-label="İşlemler" style={{ padding: "12px 16px", fontSize: "14px" }}>
                         <button
                           onClick={() => handleToggleAdmin(profile.email, profile.is_admin)}
                           disabled={loading}

@@ -29,9 +29,9 @@ function PersonelGirisCikisListesi() {
   return (
     <div>
       <h2>Personel Giriş-Çıkış Kayıtları</h2>
-      <ul>
+      <ul className="mobile-list">
         {kayitlar.map(kayit => (
-          <li key={kayit.id}>
+          <li key={kayit.id} className="mobile-list-item">
             Kullanıcı ID: {kayit.kullanici_id} - Giriş Tarihi: {kayit.giris_tarihi}
           </li>
         ))}

@@ -155,7 +155,7 @@ const Maasim = ({ session, userProfile }) => {
       <h2>Maaşım</h2>
       
       {/* Ay/Yıl Seçimi */}
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+      <div className="responsive-flex" style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
         <label>
           Ay:
           <select 
@@ -286,8 +286,8 @@ const Maasim = ({ session, userProfile }) => {
         </div>
         
         {calismaSaatleri.length > 0 ? (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ddd' }}>
+          <div className="mobile-scroll-wrap" style={{ overflowX: 'auto' }}>
+            <table className="mobile-scroll-table" style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ddd' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f5f5f5' }}>
                   <th style={{ border: '1px solid #ddd', padding: '8px' }}>Tarih</th>
