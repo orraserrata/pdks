@@ -200,13 +200,26 @@ function CalisanDetay({ calisan }) {
         </div>
       </div>
 
+      <div style={{
+        marginBottom: "12px",
+        padding: "10px 12px",
+        backgroundColor: "#eef2ff",
+        border: "1px solid #c7d2fe",
+        borderRadius: "8px",
+        fontSize: "14px",
+        fontWeight: "600",
+        color: "#3730a3"
+      }}>
+        Toplam Süre: {toplamSure} saat
+      </div>
+
       <div className="mobile-scroll-wrap" style={{ 
         overflowX: "auto", 
         borderRadius: "8px", 
         border: "1px solid #e5e7eb",
         boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)"
       }}>
-        <table className="mobile-scroll-table" style={{ 
+        <table className="mobile-table" style={{ 
           width: "100%", 
           borderCollapse: "collapse",
           backgroundColor: "white"
@@ -287,37 +300,37 @@ function CalisanDetay({ calisan }) {
                     isManualEdit ? { backgroundColor: '#fee2e2' } : 
                     { backgroundColor: 'white' })
               }}>
-                <td style={{ 
+                <td data-label="Tarih" style={{ 
                   padding: "16px 12px", 
                   fontSize: "14px", 
                   color: "#374151",
                   fontWeight: isAbsent ? "600" : "normal"
                 }}>{g.tarih}</td>
-                <td style={{ 
+                <td data-label="Gün" style={{ 
                   padding: "16px 12px", 
                   fontSize: "14px", 
                   color: "#374151",
                   fontWeight: isAbsent ? "600" : "normal"
                 }}>{g.gun}</td>
-                <td style={{ 
+                <td data-label="Giriş" style={{ 
                   padding: "16px 12px", 
                   fontSize: "14px", 
                   color: isAbsent ? "#ef4444" : "#374151",
                   fontWeight: isAbsent ? "600" : "normal"
                 }}>{row ? g.giris : '-'}</td>
-                <td style={{ 
+                <td data-label="Çıkış" style={{ 
                   padding: "16px 12px", 
                   fontSize: "14px", 
                   color: isAbsent ? "#ef4444" : "#374151",
                   fontWeight: isAbsent ? "600" : "normal"
                 }}>{row ? g.cikis : 'Devamsız'}</td>
-                <td style={{ 
+                <td data-label="Süre (saat)" style={{ 
                   padding: "16px 12px", 
                   fontSize: "14px", 
                   color: "#374151",
                   fontWeight: "600"
                 }}>{g.sure.toFixed(2)}</td>
-                <td style={{ padding: "16px 12px" }}>
+                <td data-label="Hata Bildir" style={{ padding: "16px 12px" }}>
                   <button
                     onClick={() => {
                       setSelectedRecord({
@@ -353,7 +366,7 @@ function CalisanDetay({ calisan }) {
                   </button>
                 </td>
                 {session && userProfile && userProfile.is_admin && (
-                  <td style={{ padding: "16px 12px" }}>
+                  <td data-label="İşlem" style={{ padding: "16px 12px" }}>
                     {row ? (
                       <div className="responsive-flex" style={{ display: "flex", gap: "8px" }}>
                         <button 
