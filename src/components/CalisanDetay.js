@@ -232,6 +232,74 @@ function CalisanDetay({ calisan, inDialog = false }) {
     setShowHataBildirimi(true);
   }
 
+  async function handleSaveEdit() {
+    const toIso = (s) => (s ? s.replace("T", " ") + ":00" : null);
+    const toWorkday = (s) => {
+      if (!s) return null;
+      const d = new Date(s);
+      const shifted = new Date(d.getTime() - dayStartHour * 60 * 60 * 1000);
+      return format(shifted, "yyyy-MM-dd");
+    };
+    if (!editing) return;
+
+    let error;
+    if (editing.isNew) {
+      const insertPayload = {
+        kullanici_id: editing.kullanici_id,
+        giris_tarihi: toIso(editValues.giris),
+        cikis_tarihi: toIso(editValues.cikis),
+        admin_locked: lockChecked,
+        workday_date: toWorkday(editValues.giris) || null,
+      };
+      const resp = await supabase.from("personel_giris_cikis_duzenli").insert(insertPayload);
+      error = resp.error;
+    } else {
+      const resp = await supabase
+        .from("personel_giris_cikis_duzenli")
+        .update({
+          giris_tarihi: toIso(editValues.giris),
+          cikis_tarihi: toIso(editValues.cikis),
+          admin_locked: lockChecked,
+          workday_date: toWorkday(editValues.giris) || null,
+        })
+        .eq("id", editing.id);
+      error = resp.error;
+    }
+
+    if (!error) {
+      setEditing(null);
+      await refreshGirisCikis();
+    } else {
+      alert(error.message || "Güncelleme başarısız");
+    }
+  }
+
+  async function handleClearWorkday() {
+    if (!editing || editing.isNew) return;
+    if (!window.confirm("Bu gün için workday_date kolonunu temizlemek istiyor musunuz?")) return;
+
+    const { error } = await supabase
+      .from("personel_giris_cikis_duzenli")
+      .update({ workday_date: null })
+      .eq("id", editing.id);
+
+    if (!error) {
+      setEditing(null);
+      await refreshGirisCikis();
+    } else {
+      alert(error.message || "Temizleme başarısız");
+    }
+  }
+
+  const editModalTitle = editing?.isNew
+    ? "Yeni Kayıt Ekle"
+    : "Saatleri Düzenle";
+
+  const editModalSubtitle =
+    editing?.displayDate
+    || editing?.workday_date
+    || (editValues.giris ? editValues.giris.split("T")[0] : null);
+
   function renderAdminActions(grup, kayit) {
     if (!session || !userProfile?.is_admin) return null;
 
@@ -255,8 +323,10 @@ function CalisanDetay({ calisan, inDialog = false }) {
     );
   }
 
+  const canReportError = session && userProfile && !userProfile.is_admin;
+
   return (
-    <div>
+    <div className="calisan-detay-root">
       {!inDialog && (
         <h2>
           {(calisan.isim || calisan.soyisim)
@@ -337,13 +407,15 @@ function CalisanDetay({ calisan, inDialog = false }) {
                         </div>
                       </div>
                       <div className="calisan-gun-card-actions">
-                        <button
-                          type="button"
-                          className="btn-hata"
-                          onClick={() => openHataBildir(grup, kayit)}
-                        >
-                          Hata Bildir
-                        </button>
+                        {canReportError && (
+                          <button
+                            type="button"
+                            className="btn-hata"
+                            onClick={() => openHataBildir(grup, kayit)}
+                          >
+                            Hata Bildir
+                          </button>
+                        )}
                         {renderAdminActions(grup, kayit)}
                       </div>
                     </div>
@@ -407,6 +479,7 @@ function CalisanDetay({ calisan, inDialog = false }) {
               color: "#374151",
               borderBottom: "2px solid #e5e7eb"
             }}>Süre (saat)</th>
+            {canReportError && (
             <th style={{ 
               padding: "16px 12px", 
               textAlign: "left", 
@@ -415,6 +488,7 @@ function CalisanDetay({ calisan, inDialog = false }) {
               color: "#374151",
               borderBottom: "2px solid #e5e7eb"
             }}>Hata Bildir</th>
+            )}
             {session && userProfile && userProfile.is_admin && <th style={{ 
               padding: "16px 12px", 
               textAlign: "left", 
@@ -471,6 +545,7 @@ function CalisanDetay({ calisan, inDialog = false }) {
                   color: "#374151",
                   fontWeight: "600"
                 }}>{g.sure.toFixed(2)}</td>
+                {canReportError && (
                 <td data-label="Hata Bildir" style={{ padding: "16px 12px" }}>
                   <button
                     type="button"
@@ -502,6 +577,7 @@ function CalisanDetay({ calisan, inDialog = false }) {
                     Hata Bildir
                   </button>
                 </td>
+                )}
                 {session && userProfile && userProfile.is_admin && (
                   <td data-label="İşlem" style={{ padding: "16px 12px" }}>
                     {row ? (
@@ -605,8 +681,8 @@ function CalisanDetay({ calisan, inDialog = false }) {
               fontWeight: "600",
               color: "#374151"
             }}>{toplamSure} saat</td>
-            <td></td>
-            {session && <td />}
+            {canReportError && <td></td>}
+            {userProfile?.is_admin && <td></td>}
           </tr>
         </tfoot>
       </table>
@@ -616,92 +692,63 @@ function CalisanDetay({ calisan, inDialog = false }) {
       <Modal
         open={Boolean(editing)}
         onClose={() => setEditing(null)}
-        title="Saatleri Düzenle"
+        title={editModalTitle}
         zIndex={1100}
       >
-        <div className="responsive-flex" style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
-          <label>
-            Giriş
+        <div className="saat-edit-form">
+          {editModalSubtitle && (
+            <div className="saat-edit-subtitle">
+              İş günü: <strong>{editModalSubtitle}</strong>
+            </div>
+          )}
+
+          <div className="saat-edit-grid">
+            <div className="saat-edit-field">
+              <label htmlFor="edit-giris">Giriş</label>
+              <input
+                id="edit-giris"
+                type="datetime-local"
+                value={editValues.giris}
+                onChange={(e) => setEditValues((p) => ({ ...p, giris: e.target.value }))}
+              />
+            </div>
+            <div className="saat-edit-field">
+              <label htmlFor="edit-cikis">Çıkış</label>
+              <input
+                id="edit-cikis"
+                type="datetime-local"
+                value={editValues.cikis}
+                onChange={(e) => setEditValues((p) => ({ ...p, cikis: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <label className="saat-edit-toggle">
             <input
-              type="datetime-local"
-              value={editValues.giris}
-              onChange={(e) => setEditValues((p) => ({ ...p, giris: e.target.value }))}
-              style={{ marginLeft: 6 }}
+              type="checkbox"
+              checked={lockChecked}
+              onChange={(e) => setLockChecked(e.target.checked)}
             />
+            <span className="saat-edit-toggle-box" aria-hidden="true" />
+            <span className="saat-edit-toggle-text">
+              <strong>Günü kilitle</strong>
+              <small>Cihaz verisi bu kaydın üzerine yazmasın</small>
+            </span>
           </label>
-          <label>
-            Çıkış
-            <input
-              type="datetime-local"
-              value={editValues.cikis}
-              onChange={(e) => setEditValues((p) => ({ ...p, cikis: e.target.value }))}
-              style={{ marginLeft: 6 }}
-            />
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input type="checkbox" checked={lockChecked} onChange={(e) => setLockChecked(e.target.checked)} />
-            Günü kilitle (cihaz verisi üzerine yazmasın)
-          </label>
-          <button
-            onClick={async () => {
-              // admin kontrolü RLS tarafından sağlanacak; burada sadece update deniyoruz
-              const toIso = (s) => (s ? s.replace('T', ' ') + ':00' : null);
-              const toWorkday = (s) => {
-                if (!s) return null;
-                const d = new Date(s);
-                const shifted = new Date(d.getTime() - dayStartHour * 60 * 60 * 1000);
-                return format(shifted, "yyyy-MM-dd");
-              };
-              if (!editing) return;
-              let error;
-              if (editing.isNew) {
-                const insertPayload = {
-                  kullanici_id: editing.kullanici_id,
-                  giris_tarihi: toIso(editValues.giris),
-                  cikis_tarihi: toIso(editValues.cikis),
-                  admin_locked: lockChecked,
-                  workday_date: toWorkday(editValues.giris) || null,
-                };
-                const resp = await supabase
-                  .from('personel_giris_cikis_duzenli')
-                  .insert(insertPayload);
-                error = resp.error;
-              } else {
-                const resp = await supabase
-                  .from('personel_giris_cikis_duzenli')
-                  .update({
-                    giris_tarihi: toIso(editValues.giris),
-                    cikis_tarihi: toIso(editValues.cikis),
-                    admin_locked: lockChecked,
-                    workday_date: toWorkday(editValues.giris) || null,
-                  })
-                  .eq('id', editing.id);
-                error = resp.error;
-              }
-              if (!error) {
-                setEditing(null);
-                await refreshGirisCikis();
-              } else {
-                alert(error.message || 'Güncelleme başarısız');
-              }
-            }}
-          >Kaydet</button>
-          <button
-            onClick={async () => {
-              if (!editing) return;
-              if (!window.confirm('Bu gün için workday_date kolonunu temizlemek istiyor musunuz?')) return;
-              const { error } = await supabase
-                .from('personel_giris_cikis_duzenli')
-                .update({ workday_date: null })
-                .eq('id', editing.id);
-              if (!error) {
-                setEditing(null);
-                await refreshGirisCikis();
-              } else {
-                alert(error.message || 'Temizleme başarısız');
-              }
-            }}
-          >Gün anahtarını temizle</button>
+
+          <div className="saat-edit-actions">
+            <button type="button" className="btn-primary" onClick={handleSaveEdit}>
+              Kaydet
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => setEditing(null)}>
+              İptal
+            </button>
+            {!editing?.isNew && (
+              <button type="button" className="btn-ghost" onClick={handleClearWorkday}>
+                Gün anahtarını temizle
+              </button>
+            )}
+          </div>
         </div>
       </Modal>
 

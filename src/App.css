@@ -465,8 +465,10 @@
 
 .modal-body {
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   padding: 16px;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -475,13 +477,16 @@
 /* Çalışan detay — tarih filtreleri */
 .calisan-date-filters {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
   margin-bottom: 16px;
-  padding: 12px;
+  padding: 10px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .calisan-date-field {
@@ -489,22 +494,47 @@
   flex-direction: column;
   gap: 6px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .calisan-date-field label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: #374151;
 }
 
 .calisan-date-field input {
   width: 100%;
-  padding: 8px 10px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px 6px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 14px;
   background: #fff;
   box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 10px;
+  }
+
+  .modal-body {
+    padding: 12px;
+  }
+
+  .calisan-date-filters {
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .calisan-date-field input {
+    font-size: 13px;
+    padding: 8px 4px;
+  }
 }
 
 .calisan-total-badge {
@@ -516,6 +546,12 @@
   font-size: 14px;
   font-weight: 600;
   color: #3730a3;
+}
+
+.calisan-detay-root {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 /* Çalışan detay — gün kartları (dialog / mobil) */
@@ -648,3 +684,186 @@
 .btn-edit { background: #3b82f6; color: #fff; }
 .btn-delete { background: #ef4444; color: #fff; }
 .btn-add { background: #10b981; color: #fff; }
+
+/* Saat düzenleme dialog */
+.saat-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.saat-edit-subtitle {
+  padding: 10px 12px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #0c4a6e;
+}
+
+.saat-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 420px) {
+  .saat-edit-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.saat-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.saat-edit-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.saat-edit-field input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #fff;
+  box-sizing: border-box;
+  color: #111827;
+}
+
+.saat-edit-field input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.saat-edit-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.saat-edit-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.saat-edit-toggle-box {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  flex-shrink: 0;
+  margin-top: 1px;
+  position: relative;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.saat-edit-toggle input:checked + .saat-edit-toggle-box {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.saat-edit-toggle input:checked + .saat-edit-toggle-box::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 6px;
+  height: 11px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.saat-edit-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.saat-edit-toggle-text strong {
+  font-size: 14px;
+  color: #111827;
+}
+
+.saat-edit-toggle-text small {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.35;
+}
+
+.saat-edit-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.saat-edit-actions .btn-primary,
+.saat-edit-actions .btn-secondary,
+.saat-edit-actions .btn-ghost {
+  width: 100%;
+  padding: 11px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.saat-edit-actions .btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.saat-edit-actions .btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.saat-edit-actions .btn-ghost {
+  background: transparent;
+  color: #6b7280;
+  border: 1px dashed #d1d5db;
+}
+
+.saat-edit-actions .btn-primary:active,
+.saat-edit-actions .btn-secondary:active,
+.saat-edit-actions .btn-ghost:active {
+  transform: scale(0.98);
+}
+
+@media (min-width: 480px) {
+  .saat-edit-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .saat-edit-actions .btn-primary,
+  .saat-edit-actions .btn-secondary {
+    width: auto;
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .saat-edit-actions .btn-ghost {
+    width: 100%;
+  }
+}
