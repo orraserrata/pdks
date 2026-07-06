@@ -89,7 +89,7 @@ function TumCalisanlar() {
     const printContent = `
       <html>
         <head>
-          <title>PDKS - Tüm Çalışanlar Raporu</title>
+          <title>PDKS - Çalışan Raporu</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 20px; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
@@ -104,7 +104,7 @@ function TumCalisanlar() {
         </head>
         <body>
           <div class="header">
-            <h1>PDKS - Tüm Çalışanlar Raporu</h1>
+            <h1>PDKS - Çalışan Raporu</h1>
             <div class="date-range">
               <strong>Tarih Aralığı:</strong> ${format(new Date(baslangic), "dd.MM.yyyy")} - ${format(new Date(bitis), "dd.MM.yyyy")}
             </div>
@@ -114,8 +114,6 @@ function TumCalisanlar() {
           <tr>
             <th>Sıra</th>
             <th>Ad Soyad</th>
-            <th>Kullanıcı ID</th>
-            <th>Durum</th>
             <th>Toplam Süre (Saat)</th>
             <th>İşe Gelinen Gün</th>
           </tr>
@@ -127,8 +125,6 @@ function TumCalisanlar() {
                   <tr>
                     <td>${index + 1}</td>
                     <td>${(calisan.isim || "")} ${(calisan.soyisim || "")}</td>
-                    <td>${calisan.kullanici_id}</td>
-                    <td>${calisan.aktif ? "Aktif" : "Pasif"}</td>
                     <td>${detay.toplamSure}</td>
                     <td>${detay.kayitSayisi}</td>
                   </tr>
@@ -152,7 +148,7 @@ function TumCalisanlar() {
 
   return (
     <div>
-      <h2>Tüm Çalışanlar Raporu</h2>
+      <h2>Çalışan Raporu</h2>
       
       {/* Filtreleme Butonları */}
       <div style={{
@@ -254,8 +250,6 @@ function TumCalisanlar() {
           <tr>
             <th>Sıra</th>
             <th>Ad Soyad</th>
-            <th>Kullanıcı ID</th>
-            <th>Durum</th>
             <th>Toplam Süre (Saat)</th>
             <th>İşe Gelinen Gün</th>
           </tr>
@@ -267,19 +261,6 @@ function TumCalisanlar() {
               <tr key={calisan.kullanici_id}>
                 <td data-label="Sıra">{index + 1}</td>
                 <td data-label="Ad Soyad">{(calisan.isim || "")} {(calisan.soyisim || "")}</td>
-                <td data-label="Kullanıcı ID">{calisan.kullanici_id}</td>
-                <td data-label="Durum">
-                  <span style={{
-                    padding: "4px 8px",
-                    borderRadius: "4px",
-                    fontSize: "12px",
-                    fontWeight: "500",
-                    backgroundColor: calisan.aktif ? "#dcfce7" : "#fee2e2",
-                    color: calisan.aktif ? "#166534" : "#dc2626"
-                  }}>
-                    {calisan.aktif ? "Aktif" : "Pasif"}
-                  </span>
-                </td>
                 <td data-label="Toplam Süre (Saat)">{detay.toplamSure}</td>
                 <td data-label="İşe Gelinen Gün">{detay.kayitSayisi}</td>
               </tr>
@@ -292,7 +273,6 @@ function TumCalisanlar() {
               Toplam Çalışan:
             </td>
             <td>{personeller.length}</td>
-            <td colSpan="2"></td>
           </tr>
         </tfoot>
       </table>

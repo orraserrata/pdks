@@ -324,7 +324,7 @@ function App() {
                     className={`tab ${activeTab === 'tumCalisanlar' ? 'tab-active' : ''}`}
                     onClick={() => { setActiveTab('tumCalisanlar'); setIsMobileMenuOpen(false); }}
                   >
-                    Tüm Çalışanlar
+                    Çalışan Raporu
                   </button>
                   <button
                     className={`tab ${activeTab === 'maasHesabi' ? 'tab-active' : ''}`}
