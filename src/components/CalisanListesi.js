@@ -136,7 +136,7 @@ export default function CalisanListesi({ personeller, onCalisanSelect, session }
           marginBottom: "12px"
         }}>
           <div style={{ fontSize: "14px", color: "#92400e", fontWeight: "500", marginBottom: "4px" }}>
-            🔒 Giriş Gerekli
+            Giriş Gerekli
           </div>
           <div style={{ fontSize: "13px", color: "#92400e" }}>
             Çalışan saatlerini görüntülemek için lütfen önce hesap oluşturun veya giriş yapın.
@@ -151,7 +151,7 @@ export default function CalisanListesi({ personeller, onCalisanSelect, session }
           marginBottom: "12px"
         }}>
           <div style={{ fontSize: "14px", color: "#92400e", fontWeight: "500", marginBottom: "4px" }}>
-            ⏳ Profil Yükleniyor...
+            Profil Yükleniyor...
           </div>
           <div style={{ fontSize: "13px", color: "#92400e" }}>
             Kullanıcı profiliniz yükleniyor, lütfen bekleyin.
@@ -179,99 +179,7 @@ export default function CalisanListesi({ personeller, onCalisanSelect, session }
         </div>
       ) : (
         <>
-          {/* Direkt saatleri göster */}
-          {userProfile.is_admin ? (
-            // Admin kullanıcılar tüm çalışanları görebilir
-            <div>
-              <div style={{
-                display: "flex",
-                gap: "8px",
-                marginBottom: "12px",
-                alignItems: "center",
-                flexWrap: "wrap"
-              }}>
-                <span style={{ fontSize: "14px", fontWeight: "500", color: "#374151" }}>Filtre:</span>
-                <button
-                  onClick={() => setFilter("active")}
-                  style={{
-                    padding: "6px 12px",
-                    backgroundColor: filter === "active" ? "#3b82f6" : "#e5e7eb",
-                    color: filter === "active" ? "white" : "#374151",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontSize: "14px",
-                    cursor: "pointer"
-                  }}
-                >
-                  Aktif
-                </button>
-                <button
-                  onClick={() => setFilter("inactive")}
-                  style={{
-                    padding: "6px 12px",
-                    backgroundColor: filter === "inactive" ? "#3b82f6" : "#e5e7eb",
-                    color: filter === "inactive" ? "white" : "#374151",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontSize: "14px",
-                    cursor: "pointer"
-                  }}
-                >
-                  Pasif
-                </button>
-                <button
-                  onClick={() => setFilter("all")}
-                  style={{
-                    padding: "6px 12px",
-                    backgroundColor: filter === "all" ? "#3b82f6" : "#e5e7eb",
-                    color: filter === "all" ? "white" : "#374151",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontSize: "14px",
-                    cursor: "pointer"
-                  }}
-                >
-                  Tümü
-                </button>
-              </div>
-            </div>
-          ) : (
-            // Normal kullanıcılar sadece kendi saatlerini görebilir
-            <div style={{
-              padding: "12px",
-              backgroundColor: "#f0f9ff",
-              border: "1px solid #0ea5e9",
-              borderRadius: "6px",
-              marginBottom: "12px"
-            }}>
-              <div style={{ fontSize: "14px", color: "#0c4a6e", fontWeight: "500", marginBottom: "4px" }}>
-                👤 Kendi Saatleriniz
-              </div>
-              <div style={{ fontSize: "13px", color: "#0c4a6e" }}>
-                Sadece kendi çalışma saatlerinizi görüntüleyebilirsiniz.
-              </div>
-            </div>
-          )}
-
-          {/* Admin kullanıcılar için bilgi mesajı */}
-          {userProfile.is_admin && (
-            <div style={{
-              padding: "12px",
-              backgroundColor: "#dcfce7",
-              border: "1px solid #10b981",
-              borderRadius: "6px",
-              marginBottom: "12px"
-            }}>
-              <div style={{ fontSize: "14px", color: "#166534", fontWeight: "500", marginBottom: "4px" }}>
-                👑 Admin Görünümü
-              </div>
-              <div style={{ fontSize: "13px", color: "#166534" }}>
-                Tüm personelleri görüntüleyebilir ve filtreleyebilirsiniz. Aşağıdaki listeden seçim yapabilirsiniz.
-              </div>
-            </div>
-          )}
-
-          {/* Admin Filtreleme Butonları - Sadece admin için */}
+          {/* Admin Filtreleme Butonları */}
           {userProfile.is_admin && (
             <div style={{
               display: "flex",
@@ -391,7 +299,7 @@ export default function CalisanListesi({ personeller, onCalisanSelect, session }
               border: "1px solid #e5e7eb"
             }}>
               <h3 style={{ margin: "0 0 8px 0", fontSize: "14px", color: "#374151" }}>
-                Admin Görünümü - Tüm Personeller
+                Personeller
               </h3>
               {(!personeller || personeller.length === 0) ? (
                 <div>Personel bulunamadı. Lütfen önce Personel Yönetimi sekmesinden ekleyin.</div>

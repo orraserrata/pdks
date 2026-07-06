@@ -432,21 +432,31 @@ function App() {
             <Maasim session={session} userProfile={userProfile} />
           </div>
         ) : (
-          <div className="layout">
-            <div className="card">
-              <CalisanListesi
-                personeller={personeller}
-                onCalisanSelect={(calisan) => setSeciliCalisan(calisan)}
-                session={session}
-              />
-            </div>
-            {seciliCalisan && (
-              <div className="card">
-                <CalisanDetay calisan={seciliCalisan} />
-              </div>
-            )}
+          <div className="card">
+            <CalisanListesi
+              personeller={personeller}
+              onCalisanSelect={(calisan) => setSeciliCalisan(calisan)}
+              session={session}
+            />
           </div>
         )}
+
+        <Modal
+          open={!!seciliCalisan}
+          onClose={() => setSeciliCalisan(null)}
+          wide
+          title={
+            seciliCalisan
+              ? `${(seciliCalisan.isim || seciliCalisan.soyisim)
+                  ? `${seciliCalisan.isim || ""} ${seciliCalisan.soyisim || ""}`.trim()
+                  : `Kullanıcı ${seciliCalisan.kullanici_id}`} — Çalışma Saatleri`
+              : ""
+          }
+        >
+          {seciliCalisan && (
+            <CalisanDetay calisan={seciliCalisan} inDialog />
+          )}
+        </Modal>
 
                 <Modal open={showHesapOlustur} onClose={() => setShowHesapOlustur(false)} title="Hesap Oluştur">
           <HesapOlustur onSuccess={() => setShowHesapOlustur(false)} />

@@ -7,7 +7,7 @@ import { tr as trLocale } from "date-fns/locale";
 import Modal from "./Modal";
 import HataBildirimi from "./HataBildirimi";
 
-function CalisanDetay({ calisan }) {
+function CalisanDetay({ calisan, inDialog = false }) {
   const [girisCikis, setGirisCikis] = useState([]);
   const [baslangic, setBaslangic] = useState(format(new Date(), "yyyy-MM-dd"));
   const [bitis, setBitis] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -153,11 +153,13 @@ function CalisanDetay({ calisan }) {
 
   return (
     <div>
-      <h2>
-        {(calisan.isim || calisan.soyisim)
-          ? `${calisan.isim || ""} ${calisan.soyisim || ""}`.trim()
-          : `Kullanıcı ${calisan.kullanici_id ?? calisan.id}`} Çalışma Saatleri
-      </h2>
+      {!inDialog && (
+        <h2>
+          {(calisan.isim || calisan.soyisim)
+            ? `${calisan.isim || ""} ${calisan.soyisim || ""}`.trim()
+            : `Kullanıcı ${calisan.kullanici_id ?? calisan.id}`} Çalışma Saatleri
+        </h2>
+      )}
 
       <div className="responsive-flex" style={{ 
         display: "flex", 
