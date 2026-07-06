@@ -2,6 +2,13 @@ import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import { format, differenceInCalendarDays } from "date-fns";
 import { tr as trLocale } from "date-fns/locale";
+import {
+  calcYillikIzinOzeti,
+  getCalismaTipiLabel,
+  isPartTime,
+  YILLIK_IZIN_GUN,
+  TAM_ZAMANLI_YILLIK_CALISMA_GUN,
+} from "../utils/yillikIzin";
 
 export default function IzinTalepleri() {
   const [talepler, setTalepler] = useState([]);
@@ -311,22 +318,16 @@ export default function IzinTalepleri() {
       if (!error && data) {
         const myData = data.find(d => d.kullanici_id === userProfile.kullanici_id);
         if (myData) {
-          const iseGiris = new Date(myData.ise_giris_tarihi);
-          let yearsEmployed = Math.floor(differenceInCalendarDays(new Date(), iseGiris) / 365.25);
-          if (isNaN(yearsEmployed) || yearsEmployed < 0) yearsEmployed = 0;
-          
-          const totalEarned = (myData.manuel_hakedilen_izin || 0) + (yearsEmployed * 14);
-          const devreden = myData.devreden_yillik_izin || 0;
-          const usedTotal = (myData.manuel_kullanilan_izin || 0) + (myData.used_leave || 0);
-          const remaining = totalEarned + devreden - usedTotal;
-          
+          const ozet = calcYillikIzinOzeti(myData);
           setMyLeaveSummary({
-            totalEarned,
-            devreden,
-            usedTotal,
-            remaining,
-            totalDays: myData.total_working_days || 0,
-            yearsEmployed
+            totalEarned: ozet.totalEarned,
+            devreden: ozet.devreden,
+            usedTotal: ozet.usedTotal,
+            remaining: ozet.remaining,
+            totalDays: ozet.totalDays,
+            yearsEmployed: ozet.yearsEmployed,
+            calismaTipi: ozet.calismaTipi,
+            otomatikHakedilen: ozet.otomatikHakedilen,
           });
         }
       }
@@ -477,33 +478,24 @@ export default function IzinTalepleri() {
         months[ay] = { yillik, raporlu, ucretsiz };
       });
       
-      const iseGiris = new Date(p.ise_giris_tarihi);
-      let yearsEmployed = Math.floor(differenceInCalendarDays(new Date(), iseGiris) / 365.25);
-      if (isNaN(yearsEmployed) || yearsEmployed < 0) yearsEmployed = 0;
-      
-      const totalDays = p.total_working_days || 0;
-      const manuelHakedilen = p.manuel_hakedilen_izin || 0;
-      const manuelKullanilan = p.manuel_kullanilan_izin || 0;
-      
-      const totalEarned = manuelHakedilen + (yearsEmployed * 14);
-      const devreden = p.devreden_yillik_izin || 0;
-      const usedTotal = manuelKullanilan + (p.used_leave || 0);
-      const remaining = totalEarned + devreden - usedTotal;
+      const ozet = calcYillikIzinOzeti(p);
 
       return {
         kullanici_id: p.kullanici_id,
         isim: p.isim,
         soyisim: p.soyisim,
-        aktif: true, // RPC is only fetching active users right now based on our query
+        aktif: p.aktif !== false,
+        calismaTipi: ozet.calismaTipi,
         months,
-        totalEarned,
-        devreden,
-        usedTotal,
-        remaining,
-        yearsEmployed,
-        totalDays,
-        manuelHakedilen,
-        manuelKullanilan
+        totalEarned: ozet.totalEarned,
+        devreden: ozet.devreden,
+        usedTotal: ozet.usedTotal,
+        remaining: ozet.remaining,
+        yearsEmployed: ozet.yearsEmployed,
+        totalDays: ozet.totalDays,
+        manuelHakedilen: ozet.manuelHakedilen,
+        manuelKullanilan: p.manuel_kullanilan_izin || 0,
+        otomatikHakedilen: ozet.otomatikHakedilen,
       };
     }).sort((a, b) => {
       const nameA = `${a.isim || ""} ${a.soyisim || ""}`.trim().toUpperCase();
@@ -809,7 +801,9 @@ export default function IzinTalepleri() {
                   Hak Edilen: <b>{myLeaveSummary.totalEarned}</b> | Devreden: <b>{myLeaveSummary.devreden}</b> | Kullanılan: <b style={{ color: "red" }}>{myLeaveSummary.usedTotal}</b>
                 </div>
                 <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "2px" }}>
-                  Fiili çalışma günü: {myLeaveSummary.totalDays} | Kıdem: {myLeaveSummary.yearsEmployed} Yıl
+                  {isPartTime({ calisma_tipi: myLeaveSummary.calismaTipi })
+                    ? `Yarı zamanlı | Fiili çalışma günü: ${myLeaveSummary.totalDays} (${myLeaveSummary.totalDays}/${TAM_ZAMANLI_YILLIK_CALISMA_GUN} × ${YILLIK_IZIN_GUN})`
+                    : `Tam zamanlı | Fiili çalışma günü: ${myLeaveSummary.totalDays} | Kıdem: ${myLeaveSummary.yearsEmployed} Yıl`}
                 </div>
               </div>
               <div style={{
@@ -1246,7 +1240,11 @@ export default function IzinTalepleri() {
                         padding: "10px 8px", textAlign: "center", fontWeight: "700",
                         backgroundColor: "#e0e7ff", color: "#3730a3",
                         border: "1px solid #c7d2fe", whiteSpace: "nowrap",
-                      }} title="Her 1 tam yıl kıdem = 14 gün">HAK EDİLEN</th>
+                      }} title={
+                        isPartTime({ calisma_tipi: row.calismaTipi })
+                          ? `Yarı zamanlı: fiili çalışma günü / ${TAM_ZAMANLI_YILLIK_CALISMA_GUN} × ${YILLIK_IZIN_GUN}`
+                          : `Her 1 tam yıl kıdem = ${YILLIK_IZIN_GUN} gün`
+                      }>HAK EDİLEN</th>
                       <th style={{
                         padding: "10px 8px", textAlign: "center", fontWeight: "700",
                         backgroundColor: "#e0e7ff", color: "#3730a3",
@@ -1280,7 +1278,7 @@ export default function IzinTalepleri() {
                         }}>
                           {(row.isim || "").toUpperCase()} {(row.soyisim || "").toUpperCase()}
                           <div style={{ fontSize: "11px", color: row.aktif === false ? "#fca5a5" : "#65a30d", fontWeight: "normal", marginTop: "4px" }}>
-                            (Toplam: {row.totalDays} Gün)
+                            ({getCalismaTipiLabel(row.calismaTipi)} | Toplam: {row.totalDays} Gün)
                           </div>
                         </td>
                         <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #c7d2fe", backgroundColor: "#eef2ff", fontWeight: "600", color: "#3730a3", cursor: userProfile?.is_admin ? "pointer" : "auto", textDecoration: userProfile?.is_admin ? "underline" : "none" }}

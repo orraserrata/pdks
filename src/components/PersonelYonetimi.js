@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { ensureMaasAyari, syncMaasAyariAktif } from "../utils/maasAyarlari";
+import { CALISMA_TIPI_OPTIONS, getCalismaTipiLabel } from "../utils/yillikIzin";
 
 const MAAS_TIPI_OPTIONS = [
   { value: "saatli", label: "Saatli Maaş" },
@@ -19,6 +20,7 @@ export default function PersonelYonetimi({ onChanged }) {
     ise_giris_tarihi: "",
     aktif: true,
     maas_tipi: "saatli",
+    calisma_tipi: "full_time",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -34,6 +36,7 @@ export default function PersonelYonetimi({ onChanged }) {
     ise_giris_tarihi: "",
     aktif: true,
     maas_tipi: "saatli",
+    calisma_tipi: "full_time",
   });
 
   const isValid = useMemo(() => {
@@ -182,6 +185,7 @@ export default function PersonelYonetimi({ onChanged }) {
         ise_giris_tarihi: form.ise_giris_tarihi,
         aktif: form.aktif,
         maas_tipi: form.maas_tipi,
+        calisma_tipi: form.calisma_tipi,
       };
 
       const { error: insertError } = await supabase
@@ -196,7 +200,7 @@ export default function PersonelYonetimi({ onChanged }) {
           console.warn("Maaş ayarı oluşturulamadı:", maasError);
         }
 
-        setForm({ kullanici_id: "", isim: "", soyisim: "", ise_giris_tarihi: "", aktif: true, maas_tipi: "saatli" });
+        setForm({ kullanici_id: "", isim: "", soyisim: "", ise_giris_tarihi: "", aktif: true, maas_tipi: "saatli", calisma_tipi: "full_time" });
         await reloadPersoneller();
         if (onChanged) onChanged();
       }
@@ -346,6 +350,7 @@ export default function PersonelYonetimi({ onChanged }) {
           ise_giris_tarihi: editForm.ise_giris_tarihi,
           aktif: editForm.aktif,
           maas_tipi: editForm.maas_tipi,
+          calisma_tipi: editForm.calisma_tipi,
         })
         .eq("kullanici_id", editingId);
 
@@ -358,7 +363,7 @@ export default function PersonelYonetimi({ onChanged }) {
         }
 
         setEditingId(null);
-        setEditForm({ isim: "", soyisim: "", ise_giris_tarihi: "", aktif: true, maas_tipi: "saatli" });
+        setEditForm({ isim: "", soyisim: "", ise_giris_tarihi: "", aktif: true, maas_tipi: "saatli", calisma_tipi: "full_time" });
         await reloadPersoneller();
 
         alert("Personel güncellendi!");
@@ -432,6 +437,19 @@ export default function PersonelYonetimi({ onChanged }) {
                 style={{ marginLeft: 6, padding: "4px 8px" }}
               >
                 {MAAS_TIPI_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Çalışma Tipi
+              <select
+                name="calisma_tipi"
+                value={form.calisma_tipi}
+                onChange={handleChange}
+                style={{ marginLeft: 6, padding: "4px 8px" }}
+              >
+                {CALISMA_TIPI_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
@@ -521,6 +539,9 @@ export default function PersonelYonetimi({ onChanged }) {
                     <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>Maaş Tipi</th>
                   )}
                   {userProfile && userProfile.is_admin && (
+                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>Çalışma Tipi</th>
+                  )}
+                  {userProfile && userProfile.is_admin && (
                     <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>İşlemler</th>
                   )}
                 </tr>
@@ -559,6 +580,20 @@ export default function PersonelYonetimi({ onChanged }) {
                       </td>
                     )}
                     {userProfile && userProfile.is_admin && (
+                      <td data-label="Çalışma Tipi" style={{ padding: "12px 16px", fontSize: "14px" }}>
+                        <span style={{
+                          padding: "4px 8px",
+                          borderRadius: "4px",
+                          fontSize: "12px",
+                          fontWeight: "500",
+                          backgroundColor: (p.calisma_tipi || "full_time") === "part_time" ? "#fce7f3" : "#dbeafe",
+                          color: (p.calisma_tipi || "full_time") === "part_time" ? "#9d174d" : "#1e40af",
+                        }}>
+                          {getCalismaTipiLabel(p.calisma_tipi || "full_time")}
+                        </span>
+                      </td>
+                    )}
+                    {userProfile && userProfile.is_admin && (
                       <td data-label="İşlemler" style={{ padding: "12px 16px", fontSize: "14px" }}>
                       <div className="force-wrap" style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
                       {editingId === p.kullanici_id ? (
@@ -589,6 +624,15 @@ export default function PersonelYonetimi({ onChanged }) {
                             style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px" }}
                           >
                             {MAAS_TIPI_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                          <select
+                            value={editForm.calisma_tipi}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, calisma_tipi: e.target.value }))}
+                            style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px" }}
+                          >
+                            {CALISMA_TIPI_OPTIONS.map((opt) => (
                               <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
                           </select>
@@ -668,6 +712,7 @@ export default function PersonelYonetimi({ onChanged }) {
                                 ise_giris_tarihi: p.ise_giris_tarihi || "",
                                 aktif: p.aktif || true,
                                 maas_tipi: p.maas_tipi || "saatli",
+                                calisma_tipi: p.calisma_tipi || "full_time",
                               });
                             }}
                             style={{
