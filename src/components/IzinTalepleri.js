@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import { format, differenceInCalendarDays } from "date-fns";
 import { tr as trLocale } from "date-fns/locale";
+import Modal from "./Modal";
 import {
   calcYillikIzinOzeti,
   getCalismaTipiLabel,
@@ -56,12 +57,24 @@ export default function IzinTalepleri() {
   const [personelList, setPersonelList] = useState([]);
   const [personelFilter, setPersonelFilter] = useState("aktif"); // aktif, pasif, tumu
   const [myLeaveSummary, setMyLeaveSummary] = useState(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches
+  );
+  const [detailTalep, setDetailTalep] = useState(null);
+  const [detailSummaryRow, setDetailSummaryRow] = useState(null);
 
   const izinTipleri = [
     { value: "ucretsiz_izin", label: "Ücretsiz İzin" },
     { value: "raporlu", label: "Raporlu" },
     { value: "yillik_izin", label: "Yıllık İzin" },
   ];
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const onChange = (e) => setIsMobileViewport(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -521,10 +534,157 @@ export default function IzinTalepleri() {
     });
   }, [personelList, summaryData, summaryYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const filteredSummaryRows = useMemo(() => {
+    return summaryRows.filter((row) => {
+      if (!userProfile?.is_admin && row.kullanici_id !== userProfile?.kullanici_id) return false;
+      if (userProfile?.is_admin && personelFilter === "aktif") return row.aktif !== false;
+      if (userProfile?.is_admin && personelFilter === "pasif") return row.aktif === false;
+      return true;
+    });
+  }, [summaryRows, userProfile, personelFilter]);
+
   const ayIsimleri = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN",
     "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
 
   const summaryYears = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+
+  const ayIsimleriKisa = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+
+  function getTalepCardTitle(talep) {
+    if (userProfile?.is_admin) {
+      return talep.calisan_adi || `Kullanıcı ${talep.kullanici_id}`;
+    }
+    return getIzinTipiLabel(talep.izin_tipi);
+  }
+
+  function getSummaryCardSubtitle(row) {
+    return `${getCalismaTipiLabel(row.calismaTipi)} | Toplam: ${row.totalDays} Gün`;
+  }
+
+  function getDisplayName(isim, soyisim) {
+    return `${isim || ""} ${soyisim || ""}`.trim() || "Personel";
+  }
+
+  function renderTalepDetail(talep) {
+    const gunSayisi = calcIzinGunSayisi(talep.baslangic_tarihi, talep.bitis_tarihi);
+    return (
+      <div className="personel-detail-dialog">
+        <div className="personel-detail-grid">
+          {userProfile.is_admin && (
+            <div className="personel-detail-item personel-detail-item--full">
+              <span className="personel-detail-label">Çalışan</span>
+              <span className="personel-detail-value">{talep.calisan_adi}</span>
+            </div>
+          )}
+          <div className="personel-detail-item">
+            <span className="personel-detail-label">İzin Tipi</span>
+            <span className="personel-detail-value">{getIzinTipiLabel(talep.izin_tipi)}</span>
+          </div>
+          <div className="personel-detail-item">
+            <span className="personel-detail-label">Durum</span>
+            <span className={`personel-status-badge personel-status-badge--${talep.durum === "onaylandi" ? "active" : talep.durum === "reddedildi" ? "inactive" : ""}`}
+              style={talep.durum === "beklemede" ? { background: "#fef3c7", color: "#92400e" } : undefined}
+            >
+              {getDurumLabel(talep.durum)}
+            </span>
+          </div>
+          <div className="personel-detail-item">
+            <span className="personel-detail-label">Başlangıç</span>
+            <span className="personel-detail-value">
+              {format(parseLocalDate(talep.baslangic_tarihi), "dd MMM yyyy", { locale: trLocale })}
+            </span>
+          </div>
+          <div className="personel-detail-item">
+            <span className="personel-detail-label">Bitiş</span>
+            <span className="personel-detail-value">
+              {format(parseLocalDate(talep.bitis_tarihi), "dd MMM yyyy", { locale: trLocale })}
+            </span>
+          </div>
+          <div className="personel-detail-item">
+            <span className="personel-detail-label">Gün</span>
+            <span className="personel-detail-value">{gunSayisi > 0 ? gunSayisi : "-"}</span>
+          </div>
+          <div className="personel-detail-item personel-detail-item--full">
+            <span className="personel-detail-label">Açıklama</span>
+            <span className="personel-detail-value">{talep.aciklama || "-"}</span>
+          </div>
+          {talep.admin_notu && (
+            <div className="personel-detail-item personel-detail-item--full">
+              <span className="personel-detail-label">Admin Notu</span>
+              <span className="personel-detail-value">{talep.admin_notu}</span>
+            </div>
+          )}
+          <div className="personel-detail-item personel-detail-item--full">
+            <span className="personel-detail-label">Talep Tarihi</span>
+            <span className="personel-detail-value">
+              {format(new Date(talep.talep_tarihi), "dd.MM.yyyy HH:mm")}
+            </span>
+          </div>
+        </div>
+        {userProfile.is_admin && talep.durum === "beklemede" && (
+          <div className="personel-detail-actions">
+            <button type="button" className="btn-primary" style={{ background: "#10b981" }} onClick={() => { handleDurumGuncelle(talep.id, "onaylandi"); setDetailTalep(null); }}>
+              Onayla
+            </button>
+            <button type="button" className="maas-btn maas-btn--danger" onClick={() => { handleDurumGuncelle(talep.id, "reddedildi"); setDetailTalep(null); }}>
+              Reddet
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderSummaryDetail(row) {
+    return (
+      <div className="personel-detail-dialog">
+        <div className="personel-detail-grid">
+          <div className="personel-detail-item personel-detail-item--full">
+            <span className="personel-detail-label">Çalışma Tipi</span>
+            <span className="personel-detail-value">{getCalismaTipiLabel(row.calismaTipi)}</span>
+          </div>
+          <div className="personel-detail-item">
+            <span className="personel-detail-label">Toplam Gün</span>
+            <span className="personel-detail-value">{row.totalDays}</span>
+          </div>
+          <div className="personel-detail-item">
+            <span className="personel-detail-label">Kalan İzin</span>
+            <span className="personel-detail-value izin-kalan-value">{row.remaining}</span>
+          </div>
+          <div className="personel-detail-item">
+            <span className="personel-detail-label">Hak Edilen</span>
+            {userProfile?.is_admin ? (
+              <button type="button" className="izin-editable-value" onClick={() => handleEditHakedilen(row.kullanici_id, row.manuelHakedilen, row.isim, row.soyisim)}>
+                {row.totalEarned}
+              </button>
+            ) : (
+              <span className="personel-detail-value">{row.totalEarned}</span>
+            )}
+          </div>
+          <div className="personel-detail-item">
+            <span className="personel-detail-label">Devreden</span>
+            {userProfile?.is_admin ? (
+              <button type="button" className="izin-editable-value" onClick={() => handleEditDevreden(row.kullanici_id, row.devreden, row.isim, row.soyisim)}>
+                {row.devreden}
+              </button>
+            ) : (
+              <span className="personel-detail-value">{row.devreden}</span>
+            )}
+          </div>
+          <div className="personel-detail-item">
+            <span className="personel-detail-label">Kullanılan</span>
+            {userProfile?.is_admin ? (
+              <button type="button" className="izin-editable-value izin-editable-value--used" onClick={() => handleEditKullanilan(row.kullanici_id, row.manuelKullanilan, row.isim, row.soyisim)}>
+                {row.usedTotal}
+              </button>
+            ) : (
+              <span className="personel-detail-value">{row.usedTotal}</span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   function getIzinTipiLabel(tip) {
     const t = izinTipleri.find((x) => x.value === tip);
@@ -845,6 +1005,48 @@ export default function IzinTalepleri() {
           )}
 
           {/* Filtre */}
+          {isMobileViewport ? (
+            <div className="izin-mobile-filters">
+              <div className="maas-toolbar">
+                <div className="maas-toolbar-field">
+                  <label htmlFor="izin-list-ay">Ay</label>
+                  <select id="izin-list-ay" value={listMonth} onChange={(e) => setListMonth(parseInt(e.target.value, 10))}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                      <option key={m} value={m}>{new Date(2000, m - 1).toLocaleString("tr-TR", { month: "long" })}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="maas-toolbar-field">
+                  <label htmlFor="izin-list-yil">Yıl</label>
+                  <select id="izin-list-yil" value={listYear} onChange={(e) => setListYear(parseInt(e.target.value, 10))}>
+                    {[...Array(5)].map((_, i) => {
+                      const year = new Date().getFullYear() - 2 + i;
+                      return <option key={year} value={year}>{year}</option>;
+                    })}
+                  </select>
+                </div>
+              </div>
+              <div className="personel-filter-bar">
+                <span className="personel-filter-label">Durum:</span>
+                {[
+                  { value: "tumu", label: "Tümü", color: "#3b82f6" },
+                  { value: "beklemede", label: "Beklemede", color: "#f59e0b" },
+                  { value: "onaylandi", label: "Onaylandı", color: "#10b981" },
+                  { value: "reddedildi", label: "Reddedildi", color: "#ef4444" },
+                ].map((f) => (
+                  <button
+                    key={f.value}
+                    type="button"
+                    className={`personel-filter-btn${filter === f.value ? " personel-filter-btn--active" : ""}`}
+                    style={filter === f.value ? { backgroundColor: f.color, borderColor: f.color, color: "white" } : undefined}
+                    onClick={() => setFilter(f.value)}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
           <div className="responsive-flex" style={{ marginBottom: "16px", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span style={{ fontSize: "14px", fontWeight: "500", color: "#374151" }}>Ay:</span>
@@ -900,23 +1102,6 @@ export default function IzinTalepleri() {
               </button>
             ))}
           </div>
-
-          {/* Admin bilgi */}
-          {userProfile.is_admin && (
-            <div style={{
-              padding: "12px",
-              backgroundColor: "#dcfce7",
-              border: "1px solid #10b981",
-              borderRadius: "6px",
-              marginBottom: "12px",
-            }}>
-              <div style={{ fontSize: "14px", color: "#166534", fontWeight: "500", marginBottom: "4px" }}>
-                👑 Admin Görünümü
-              </div>
-              <div style={{ fontSize: "13px", color: "#166534" }}>
-                Tüm çalışanların izin taleplerini görebilir, onaylayabilir veya reddedebilirsiniz.
-              </div>
-            </div>
           )}
 
           {/* Toplu İşlem Çubuğu - Admin */}
@@ -976,6 +1161,27 @@ export default function IzinTalepleri() {
           ) : talepler.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}>
               {filter === "tumu" ? "Henüz izin talebi yok." : `${getDurumLabel(filter)} durumunda talep yok.`}
+            </div>
+          ) : isMobileViewport ? (
+            <div className="personel-mobile-list">
+              {talepler.map((talep) => (
+                <button
+                  key={talep.id}
+                  type="button"
+                  className={`personel-collapsed-card izin-talep-card${selectedIds.includes(talep.id) ? " izin-talep-card--selected" : ""}`}
+                  onClick={() => setDetailTalep(talep)}
+                >
+                  <div className="izin-talep-card-main">
+                    <div className="personel-collapsed-card-name">{getTalepCardTitle(talep)}</div>
+                    <span
+                      className="personel-status-badge"
+                      style={{ backgroundColor: getDurumColor(talep.durum), color: "white" }}
+                    >
+                      {getDurumLabel(talep.durum)}
+                    </span>
+                  </div>
+                </button>
+              ))}
             </div>
           ) : (
             <div className="mobile-scroll-wrap" style={{
@@ -1242,91 +1448,35 @@ export default function IzinTalepleri() {
             <div>Yükleniyor...</div>
           ) : (
             <>
-              <div className="mobile-scroll-wrap" style={{ overflowX: "auto", borderRadius: "4px", border: "2px solid #16a34a", marginBottom: "32px" }}>
-                <table className="mobile-scroll-table" style={{
-                  width: "100%", borderCollapse: "collapse", fontSize: "13px",
-                  minWidth: "600px",
-                }}>
-                  <thead>
-                    <tr>
-                      <th style={{
-                        padding: "10px 12px", textAlign: "left", fontWeight: "700",
-                        backgroundColor: "#dcfce7", color: "#166534",
-                        border: "1px solid #16a34a", whiteSpace: "nowrap",
-                        position: "sticky", left: 0, zIndex: 1, minWidth: "180px",
-                      }}>ADI SOYADI</th>
-                      <th style={{
-                        padding: "10px 8px", textAlign: "center", fontWeight: "700",
-                        backgroundColor: "#e0e7ff", color: "#3730a3",
-                        border: "1px solid #c7d2fe", whiteSpace: "nowrap",
-                      }} title={`Tam zamanlı: her tam yıl kıdem = ${YILLIK_IZIN_GUN} gün | Yarı zamanlı: her tam ${PART_TIME_IZIN_ESIK_GUN} çalışma günü = ${YILLIK_IZIN_GUN} gün izin`}>HAK EDİLEN</th>
-                      <th style={{
-                        padding: "10px 8px", textAlign: "center", fontWeight: "700",
-                        backgroundColor: "#e0e7ff", color: "#3730a3",
-                        border: "1px solid #c7d2fe", whiteSpace: "nowrap",
-                      }}>DEVREDEN</th>
-                      <th style={{
-                        padding: "10px 8px", textAlign: "center", fontWeight: "700",
-                        backgroundColor: "#fee2e2", color: "#991b1b",
-                        border: "1px solid #fecaca", whiteSpace: "nowrap",
-                      }}>KULLANILAN</th>
-                      <th style={{
-                        padding: "10px 8px", textAlign: "center", fontWeight: "700",
-                        backgroundColor: "#d1fae5", color: "#065f46",
-                        border: "1px solid #a7f3d0", whiteSpace: "nowrap",
-                      }}>KALAN İZİN</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summaryRows.filter((row) => {
-                      if (!userProfile?.is_admin && row.kullanici_id !== userProfile?.kullanici_id) return false;
-                      if (userProfile?.is_admin && personelFilter === "aktif") return row.aktif !== false;
-                      if (userProfile?.is_admin && personelFilter === "pasif") return row.aktif === false;
-                      return true;
-                    }).map((row) => (
-                      <tr key={row.kullanici_id}>
-                        <td style={{
-                          padding: "8px 12px", fontWeight: "700", textAlign: "center",
-                          border: "1px solid #16a34a", backgroundColor: "#f0fdf4",
-                          color: row.aktif === false ? "#dc2626" : "#166534",
-                          whiteSpace: "nowrap", position: "sticky", left: 0, zIndex: 1,
-                        }}>
-                          {(row.isim || "").toUpperCase()} {(row.soyisim || "").toUpperCase()}
-                          <div style={{ fontSize: "11px", color: row.aktif === false ? "#fca5a5" : "#65a30d", fontWeight: "normal", marginTop: "4px" }}>
-                            ({getCalismaTipiLabel(row.calismaTipi)} | Toplam: {row.totalDays} Gün)
-                          </div>
-                        </td>
-                        <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #c7d2fe", backgroundColor: "#eef2ff", fontWeight: "600", color: "#3730a3", cursor: userProfile?.is_admin ? "pointer" : "auto", textDecoration: userProfile?.is_admin ? "underline" : "none" }}
-                            onClick={() => userProfile?.is_admin && handleEditHakedilen(row.kullanici_id, row.manuelHakedilen, row.isim, row.soyisim)}
-                            title={userProfile?.is_admin ? "Önceki sistemden kazanılan izni manuel girmek/düzenlemek için tıklayın" : "Hak Edilen İzin"}>
-                          {row.totalEarned}
-                        </td>
-                        <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #c7d2fe", backgroundColor: "#eef2ff", fontWeight: "600", color: "#2563eb", cursor: userProfile?.is_admin ? "pointer" : "auto", textDecoration: userProfile?.is_admin ? "underline" : "none" }}
-                            onClick={() => userProfile?.is_admin && handleEditDevreden(row.kullanici_id, row.devreden, row.isim, row.soyisim)}
-                            title={userProfile?.is_admin ? "Geçmiş seneden devreden izni düzenlemek için tıklayın" : "Devreden İzin"}>
-                          {row.devreden}
-                        </td>
-                        <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #fecaca", backgroundColor: "#fef2f2", fontWeight: "600", color: "#991b1b", cursor: userProfile?.is_admin ? "pointer" : "auto", textDecoration: userProfile?.is_admin ? "underline" : "none" }}
-                            onClick={() => userProfile?.is_admin && handleEditKullanilan(row.kullanici_id, row.manuelKullanilan, row.isim, row.soyisim)}
-                            title={userProfile?.is_admin ? "Önceki sistemde kullanılmış izni manuel girmek/düzenlemek için tıklayın" : "Kullanılan İzin"}>
-                          {row.usedTotal}
-                        </td>
-                        <td style={{ padding: "8px 6px", textAlign: "center", border: "1px solid #a7f3d0", backgroundColor: "#ecfdf5", fontWeight: "bold", fontSize: "14px", color: "#064e3b" }}>
-                          {row.remaining}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {filteredSummaryRows.length === 0 ? (
+                <div className="personel-empty">Özet verisi bulunamadı.</div>
+              ) : (
+                <div className="personel-mobile-list izin-summary-list">
+                  {filteredSummaryRows.map((row) => (
+                    <button
+                      key={row.kullanici_id}
+                      type="button"
+                      className="personel-collapsed-card izin-summary-card"
+                      onClick={() => setDetailSummaryRow(row)}
+                    >
+                      <div className="personel-collapsed-card-name">
+                        {getDisplayName(row.isim, row.soyisim)}
+                      </div>
+                      <div className="izin-summary-card-subtitle">
+                        {getSummaryCardSubtitle(row)}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
 
-              <h4 style={{ margin: "0 0 16px 0", fontSize: "18px", color: "#166534", fontWeight: "700" }}>
-                🗓️ {summaryYear} Yılı Aylık İzin Kullanımları
+              <h4 className="izin-aylik-title">
+                {summaryYear} Yılı Aylık İzin Kullanımları
               </h4>
-              <div className="mobile-scroll-wrap" style={{ overflowX: "auto", borderRadius: "4px", border: "2px solid #16a34a" }}>
-                <table className="mobile-scroll-table" style={{
+              <div className={`mobile-scroll-wrap izin-aylik-table-wrap${isMobileViewport ? " izin-aylik-table-wrap--mobile" : ""}`}>
+                <table className={`mobile-scroll-table izin-aylik-table${isMobileViewport ? " izin-aylik-table--mobile" : ""}`} style={{
                   width: "100%", borderCollapse: "collapse", fontSize: "13px",
-                  minWidth: "1200px",
+                  minWidth: isMobileViewport ? "720px" : "1200px",
                 }}>
                   <thead>
                     <tr>
@@ -1334,44 +1484,48 @@ export default function IzinTalepleri() {
                         padding: "10px 12px", textAlign: "left", fontWeight: "700",
                         backgroundColor: "#dcfce7", color: "#166534",
                         border: "1px solid #16a34a", whiteSpace: "nowrap",
-                        position: "sticky", left: 0, zIndex: 1, minWidth: "180px",
+                        position: "sticky", left: 0, zIndex: 1, minWidth: isMobileViewport ? "120px" : "180px",
                       }}>ADI SOYADI</th>
-                      {ayIsimleri.map((ay, i) => (
+                      {(isMobileViewport ? ayIsimleriKisa : ayIsimleri).map((ay, i) => (
                         <th key={i} style={{
-                          padding: "10px 8px", textAlign: "center", fontWeight: "700",
+                          padding: isMobileViewport ? "8px 4px" : "10px 8px",
+                          textAlign: "center", fontWeight: "700",
                           backgroundColor: "#dcfce7", color: "#166534",
                           border: "1px solid #16a34a", whiteSpace: "nowrap",
-                          minWidth: "80px",
+                          minWidth: isMobileViewport ? "52px" : "80px",
+                          fontSize: isMobileViewport ? "11px" : "13px",
                         }}>{ay}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {summaryRows.filter((row) => {
-                      if (!userProfile?.is_admin && row.kullanici_id !== userProfile?.kullanici_id) return false;
-                      if (userProfile?.is_admin && personelFilter === "aktif") return row.aktif !== false;
-                      if (userProfile?.is_admin && personelFilter === "pasif") return row.aktif === false;
-                      return true;
-                    }).map((row) => (
+                    {filteredSummaryRows.map((row) => (
                       <tr key={row.kullanici_id}>
                         <td style={{
-                          padding: "8px 12px", fontWeight: "700", textAlign: "center",
+                          padding: isMobileViewport ? "6px 8px" : "8px 12px",
+                          fontWeight: "700", textAlign: "center",
                           border: "1px solid #16a34a", backgroundColor: "#f0fdf4",
                           color: row.aktif === false ? "#dc2626" : "#166534",
                           whiteSpace: "nowrap", position: "sticky", left: 0, zIndex: 1,
+                          fontSize: isMobileViewport ? "11px" : "13px",
                         }}>
-                          {(row.isim || "").toUpperCase()} {(row.soyisim || "").toUpperCase()}
+                          {isMobileViewport
+                            ? getDisplayName(row.isim, row.soyisim)
+                            : `${(row.isim || "").toUpperCase()} ${(row.soyisim || "").toUpperCase()}`}
                         </td>
-                        {[1,2,3,4,5,6,7,8,9,10,11,12].map((ay) => {
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((ay) => {
                           const m = row.months[ay];
                           const content = renderCellContent(m);
                           const hasData = content !== "";
                           return (
                             <td key={ay} style={{
-                              padding: "8px 6px", textAlign: "center",
+                              padding: isMobileViewport ? "6px 3px" : "8px 6px",
+                              textAlign: "center",
                               border: "1px solid #16a34a",
                               backgroundColor: "#f0fdf4",
-                              color: "#374151", fontSize: "12px", fontWeight: hasData ? "600" : "normal",
+                              color: "#374151",
+                              fontSize: isMobileViewport ? "10px" : "12px",
+                              fontWeight: hasData ? "600" : "normal",
                               whiteSpace: "nowrap",
                             }}>
                               {content}
@@ -1387,6 +1541,22 @@ export default function IzinTalepleri() {
           )}
         </div>
       )}
+
+      <Modal
+        open={isMobileViewport && !!detailTalep}
+        onClose={() => setDetailTalep(null)}
+        title={detailTalep ? getTalepCardTitle(detailTalep) : "İzin Talebi"}
+      >
+        {detailTalep && renderTalepDetail(detailTalep)}
+      </Modal>
+
+      <Modal
+        open={!!detailSummaryRow}
+        onClose={() => setDetailSummaryRow(null)}
+        title={detailSummaryRow ? getDisplayName(detailSummaryRow.isim, detailSummaryRow.soyisim) : "İzin Özeti"}
+      >
+        {detailSummaryRow && renderSummaryDetail(detailSummaryRow)}
+      </Modal>
     </div>
   );
 }

@@ -1665,3 +1665,95 @@ table .btn-toggle-status {
     gap: 10px;
   }
 }
+
+/* İzin Talepleri */
+.izin-mobile-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.izin-talep-card {
+  text-align: left;
+}
+
+.izin-talep-card-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.izin-talep-card--selected {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.izin-summary-list {
+  margin-bottom: 28px;
+}
+
+.izin-summary-card {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.izin-summary-card-subtitle {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.izin-aylik-title {
+  margin: 0 0 16px;
+  font-size: 16px;
+  color: #166534;
+  font-weight: 700;
+}
+
+.izin-aylik-table-wrap {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 2px solid #16a34a;
+}
+
+.izin-aylik-table-wrap--mobile {
+  -webkit-overflow-scrolling: touch;
+}
+
+.izin-kalan-value {
+  color: #065f46;
+  font-weight: 700;
+}
+
+.izin-editable-value {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px dashed #93c5fd;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #3730a3;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.izin-editable-value--used {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+@media (min-width: 769px) {
+  .izin-summary-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+  }
+}
