@@ -1,6 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 
+const MAAS_TIPI_OPTIONS = [
+  { value: "saatli", label: "Saatli Maaş" },
+  { value: "gunluk", label: "Güne Göre Maaş" },
+];
+
+function getMaasTipiLabel(maasTipi) {
+  return MAAS_TIPI_OPTIONS.find((o) => o.value === maasTipi)?.label || "Saatli Maaş";
+}
+
 export default function PersonelYonetimi({ onChanged }) {
   const [form, setForm] = useState({
     kullanici_id: "",
@@ -8,6 +17,7 @@ export default function PersonelYonetimi({ onChanged }) {
     soyisim: "",
     ise_giris_tarihi: "",
     aktif: true,
+    maas_tipi: "saatli",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -22,6 +32,7 @@ export default function PersonelYonetimi({ onChanged }) {
     soyisim: "",
     ise_giris_tarihi: "",
     aktif: true,
+    maas_tipi: "saatli",
   });
 
   const isValid = useMemo(() => {
@@ -161,6 +172,7 @@ export default function PersonelYonetimi({ onChanged }) {
         soyisim: form.soyisim.trim(),
         ise_giris_tarihi: form.ise_giris_tarihi,
         aktif: form.aktif,
+        maas_tipi: form.maas_tipi,
       };
 
       const { error: insertError } = await supabase
@@ -170,7 +182,14 @@ export default function PersonelYonetimi({ onChanged }) {
       if (insertError) {
         setError(insertError.message || "Kayıt eklenemedi");
       } else {
-        setForm({ kullanici_id: "", isim: "", soyisim: "", ise_giris_tarihi: "", aktif: true });
+        setForm({ kullanici_id: "", isim: "", soyisim: "", ise_giris_tarihi: "", aktif: true, maas_tipi: "saatli" });
+
+        let query = supabase.from("personel").select("*");
+        if (filter === "active") query = query.eq("aktif", true);
+        else if (filter === "inactive") query = query.eq("aktif", false);
+        const { data } = await query.order("isim", { ascending: true });
+        if (data) setPersoneller(data);
+
         if (onChanged) onChanged();
       }
     } catch (err) {
@@ -320,6 +339,7 @@ export default function PersonelYonetimi({ onChanged }) {
           soyisim: editForm.soyisim.trim(),
           ise_giris_tarihi: editForm.ise_giris_tarihi,
           aktif: editForm.aktif,
+          maas_tipi: editForm.maas_tipi,
         })
         .eq("kullanici_id", editingId);
 
@@ -327,7 +347,7 @@ export default function PersonelYonetimi({ onChanged }) {
         setError(updateError.message || "Güncelleme başarısız");
       } else {
         setEditingId(null);
-        setEditForm({ isim: "", soyisim: "", ise_giris_tarihi: "", aktif: true });
+        setEditForm({ isim: "", soyisim: "", ise_giris_tarihi: "", aktif: true, maas_tipi: "saatli" });
         
         // Personelleri yeniden yükle
         const { data, error } = await supabase
@@ -400,6 +420,19 @@ export default function PersonelYonetimi({ onChanged }) {
                 required
                 style={{ marginLeft: 6 }}
               />
+            </label>
+            <label>
+              Maaş Tipi
+              <select
+                name="maas_tipi"
+                value={form.maas_tipi}
+                onChange={handleChange}
+                style={{ marginLeft: 6, padding: "4px 8px" }}
+              >
+                {MAAS_TIPI_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
             </label>
             <label>
               <input
@@ -483,6 +516,9 @@ export default function PersonelYonetimi({ onChanged }) {
                   <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>İşe Giriş Tarihi</th>
                   <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>Durum</th>
                   {userProfile && userProfile.is_admin && (
+                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>Maaş Tipi</th>
+                  )}
+                  {userProfile && userProfile.is_admin && (
                     <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>İşlemler</th>
                   )}
                 </tr>
@@ -506,6 +542,20 @@ export default function PersonelYonetimi({ onChanged }) {
                         {p.aktif ? "Aktif" : "Pasif"}
                       </span>
                     </td>
+                    {userProfile && userProfile.is_admin && (
+                      <td data-label="Maaş Tipi" style={{ padding: "12px 16px", fontSize: "14px" }}>
+                        <span style={{
+                          padding: "4px 8px",
+                          borderRadius: "4px",
+                          fontSize: "12px",
+                          fontWeight: "500",
+                          backgroundColor: (p.maas_tipi || "saatli") === "gunluk" ? "#e0e7ff" : "#fef3c7",
+                          color: (p.maas_tipi || "saatli") === "gunluk" ? "#3730a3" : "#92400e",
+                        }}>
+                          {getMaasTipiLabel(p.maas_tipi || "saatli")}
+                        </span>
+                      </td>
+                    )}
                     {userProfile && userProfile.is_admin && (
                       <td data-label="İşlemler" style={{ padding: "12px 16px", fontSize: "14px" }}>
                       <div className="force-wrap" style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
@@ -531,6 +581,15 @@ export default function PersonelYonetimi({ onChanged }) {
                             onChange={(e) => setEditForm(prev => ({ ...prev, ise_giris_tarihi: e.target.value }))}
                             style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px" }}
                           />
+                          <select
+                            value={editForm.maas_tipi}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, maas_tipi: e.target.value }))}
+                            style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px" }}
+                          >
+                            {MAAS_TIPI_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
                           <label style={{ display: "flex", alignItems: "center", fontSize: "12px" }}>
                             <input
                               type="checkbox"
@@ -606,6 +665,7 @@ export default function PersonelYonetimi({ onChanged }) {
                                 soyisim: p.soyisim || "",
                                 ise_giris_tarihi: p.ise_giris_tarihi || "",
                                 aktif: p.aktif || true,
+                                maas_tipi: p.maas_tipi || "saatli",
                               });
                             }}
                             style={{

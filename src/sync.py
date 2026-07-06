@@ -253,7 +253,8 @@ def ensure_personel(users_map, attendance_list):
             "isim": name_parts[0],
             "soyisim": name_parts[1],
             "ise_giris_tarihi": first_day,
-            "aktif": True
+            "aktif": True,
+            "maas_tipi": "saatli",
         }
         
         res = supabase.table("personel").insert(payload).execute()
