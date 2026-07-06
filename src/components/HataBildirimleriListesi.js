@@ -13,6 +13,16 @@ export default function HataBildirimleriListesi() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const onChange = (e) => setIsMobileViewport(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   useEffect(() => {
     if (userProfile) {
@@ -243,6 +253,143 @@ export default function HataBildirimleriListesi() {
     return hataTipleri[hataTipi] || hataTipi;
   }
 
+  function renderAdminActions(bildirim) {
+    if (bildirim.durum === "beklemede") {
+      return (
+        <div className="hata-bildirim-actions">
+          <button type="button" className="hata-bildirim-btn hata-bildirim-btn--info" onClick={() => updateDurum(bildirim.id, "inceleniyor")}>
+            İncelemeye Al
+          </button>
+          <button
+            type="button"
+            className="hata-bildirim-btn hata-bildirim-btn--success"
+            onClick={() => {
+              const cozumNotu = prompt("Çözüm notu ekleyin:");
+              if (cozumNotu !== null) updateDurum(bildirim.id, "cozuldu", cozumNotu);
+            }}
+          >
+            Çözüldü
+          </button>
+          <button
+            type="button"
+            className="hata-bildirim-btn hata-bildirim-btn--danger"
+            onClick={() => {
+              const redNotu = prompt("Red nedeni:");
+              if (redNotu !== null) updateDurum(bildirim.id, "reddedildi", redNotu);
+            }}
+          >
+            Reddet
+          </button>
+        </div>
+      );
+    }
+
+    if (bildirim.durum === "inceleniyor") {
+      return (
+        <div className="hata-bildirim-actions">
+          <button
+            type="button"
+            className="hata-bildirim-btn hata-bildirim-btn--success"
+            onClick={() => {
+              const cozumNotu = prompt("Çözüm notu ekleyin:");
+              if (cozumNotu !== null) updateDurum(bildirim.id, "cozuldu", cozumNotu);
+            }}
+          >
+            Çözüldü
+          </button>
+          <button
+            type="button"
+            className="hata-bildirim-btn hata-bildirim-btn--danger"
+            onClick={() => {
+              const redNotu = prompt("Red nedeni:");
+              if (redNotu !== null) updateDurum(bildirim.id, "reddedildi", redNotu);
+            }}
+          >
+            Reddet
+          </button>
+        </div>
+      );
+    }
+
+    if (bildirim.durum === "cozuldu" || bildirim.durum === "reddedildi") {
+      return bildirim.cozum_tarihi ? (
+        <div className="hata-bildirim-meta">
+          Karar: {format(new Date(bildirim.cozum_tarihi), "dd.MM.yyyy HH:mm")}
+        </div>
+      ) : null;
+    }
+
+    return null;
+  }
+
+  function renderMobileBildirimItem(bildirim) {
+    const isClosed = bildirim.durum === "cozuldu" || bildirim.durum === "reddedildi";
+    return (
+      <article
+        key={bildirim.id}
+        className={`hata-bildirim-item${selectedIds.includes(bildirim.id) ? " hata-bildirim-item--selected" : ""}`}
+      >
+        <div className="hata-bildirim-item-header">
+          {userProfile?.is_admin && (
+            <input
+              type="checkbox"
+              className="hata-bildirim-checkbox"
+              checked={selectedIds.includes(bildirim.id)}
+              onChange={() => toggleSelect(bildirim.id)}
+              disabled={isClosed}
+            />
+          )}
+          <div className="hata-bildirim-item-header-main">
+            <div className="hata-bildirim-item-date">
+              {format(new Date(bildirim.tarih), "dd MMM yyyy", { locale: trLocale })}
+            </div>
+            <div className="hata-bildirim-item-times">
+              Giriş: {bildirim.giris_saati} · Çıkış: {bildirim.cikis_saati}
+            </div>
+          </div>
+          <span
+            className="hata-bildirim-status"
+            style={{ backgroundColor: getDurumColor(bildirim.durum) }}
+          >
+            {getDurumLabel(bildirim.durum)}
+          </span>
+        </div>
+
+        <div className="hata-bildirim-fields">
+          <div className="hata-bildirim-field">
+            <span className="hata-bildirim-label">Çalışan</span>
+            <span className="hata-bildirim-value">
+              {bildirim.calisan_adi}
+              <span className="hata-bildirim-sub">ID: {bildirim.kullanici_id}</span>
+            </span>
+          </div>
+          <div className="hata-bildirim-field">
+            <span className="hata-bildirim-label">Hata Tipi</span>
+            <span className="hata-bildirim-value">{getHataTipiLabel(bildirim.hata_tipi)}</span>
+          </div>
+          <div className="hata-bildirim-field hata-bildirim-field--full">
+            <span className="hata-bildirim-label">Açıklama</span>
+            <span className="hata-bildirim-value hata-bildirim-value--multiline">{bildirim.aciklama}</span>
+          </div>
+          {bildirim.cozum_notu && (
+            <div className="hata-bildirim-field hata-bildirim-field--full">
+              <span className="hata-bildirim-label">Çözüm Notu</span>
+              <span className="hata-bildirim-value hata-bildirim-value--note">{bildirim.cozum_notu}</span>
+            </div>
+          )}
+          <div className="hata-bildirim-field">
+            <span className="hata-bildirim-label">Bildirim Tarihi</span>
+            <span className="hata-bildirim-value">
+              {format(new Date(bildirim.bildirim_tarihi), "dd.MM.yyyy HH:mm")}
+            </span>
+          </div>
+        </div>
+
+        {userProfile?.is_admin && renderAdminActions(bildirim)}
+      </article>
+    );
+  }
+
   if (loading) return <div>Yükleniyor...</div>;
   if (error) return <div style={{ color: "red" }}>{error}</div>;
 
@@ -272,7 +419,40 @@ export default function HataBildirimleriListesi() {
   return (
     <div>
       <h2>Hata Bildirimleri</h2>
-      
+
+      {isMobileViewport ? (
+        <div className="hata-bildirim-filters">
+          <div className="maas-toolbar">
+            <div className="maas-toolbar-field">
+              <label htmlFor="hata-filter-ay">Ay</label>
+              <select id="hata-filter-ay" value={selectedMonth} onChange={(e) => setSelectedMonth(parseInt(e.target.value, 10))}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                  <option key={m} value={m}>{new Date(2000, m - 1).toLocaleString("tr-TR", { month: "long" })}</option>
+                ))}
+              </select>
+            </div>
+            <div className="maas-toolbar-field">
+              <label htmlFor="hata-filter-yil">Yıl</label>
+              <select id="hata-filter-yil" value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}>
+                {[...Array(5)].map((_, i) => {
+                  const year = new Date().getFullYear() - 2 + i;
+                  return <option key={year} value={year}>{year}</option>;
+                })}
+              </select>
+            </div>
+            <div className="maas-toolbar-field">
+              <label htmlFor="hata-filter-durum">Durum</label>
+              <select id="hata-filter-durum" value={filter} onChange={(e) => setFilter(e.target.value)}>
+                <option value="tumu">Tümü</option>
+                <option value="beklemede">Beklemede</option>
+                <option value="inceleniyor">İnceleniyor</option>
+                <option value="cozuldu">Çözüldü</option>
+                <option value="reddedildi">Reddedildi</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="responsive-flex" style={{ marginBottom: "16px", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
         <div>
           <label style={{ marginRight: "8px", fontWeight: "bold", fontSize: "14px" }}>Ay:</label>
@@ -319,6 +499,7 @@ export default function HataBildirimleriListesi() {
           </select>
         </div>
       </div>
+      )}
 
       {/* Toplu Islem Cubugu - Sadece Admin */}
       {userProfile?.is_admin && selectedIds.length > 0 && (
@@ -380,8 +561,12 @@ export default function HataBildirimleriListesi() {
       )}
 
       {bildirimler.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}>
+        <div className="personel-empty">
           {filter === "tumu" ? "Henüz hata bildirimi yok." : `${getDurumLabel(filter)} durumunda bildirim yok.`}
+        </div>
+      ) : isMobileViewport ? (
+        <div className="hata-bildirim-list">
+          {bildirimler.map(renderMobileBildirimItem)}
         </div>
       ) : (
         <div className="mobile-scroll-wrap" style={{ 
@@ -576,154 +761,11 @@ export default function HataBildirimleriListesi() {
                     {format(new Date(bildirim.bildirim_tarihi), "dd.MM.yyyy HH:mm")}
                   </td>
                   {userProfile?.is_admin && (
-                    <td style={{ 
-                      padding: "16px 12px", 
-                      fontSize: "14px", 
-                      color: "#374151"
-                    }}>
-                    <div className="responsive-flex" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                      {bildirim.durum === "beklemede" && (
-                        <>
-                          <button
-                            onClick={() => updateDurum(bildirim.id, "inceleniyor")}
-                            style={{
-                              padding: "8px 16px",
-                              fontSize: "13px",
-                              backgroundColor: "#3b82f6",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "6px",
-                              cursor: "pointer",
-                              fontWeight: "500",
-                              transition: "all 0.2s",
-                              boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
-                            }}
-                            onMouseEnter={(e) => {
-                              e.target.style.backgroundColor = "#2563eb";
-                              e.target.style.transform = "translateY(-1px)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.target.style.backgroundColor = "#3b82f6";
-                              e.target.style.transform = "translateY(0)";
-                            }}
-                          >
-                            İncelemeye Al
-                          </button>
-                          <button
-                            onClick={() => {
-                              const cozumNotu = prompt("Çözüm notu ekleyin:");
-                              if (cozumNotu !== null) {
-                                updateDurum(bildirim.id, "cozuldu", cozumNotu);
-                              }
-                            }}
-                            style={{
-                              padding: "4px 8px",
-                              fontSize: "12px",
-                              backgroundColor: "#10b981",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "4px",
-                              cursor: "pointer"
-                            }}
-                          >
-                            Çözüldü
-                          </button>
-                          <button
-                            onClick={() => {
-                              const redNotu = prompt("Red nedeni:");
-                              if (redNotu !== null) {
-                                updateDurum(bildirim.id, "reddedildi", redNotu);
-                              }
-                            }}
-                            style={{
-                              padding: "4px 8px",
-                              fontSize: "12px",
-                              backgroundColor: "#ef4444",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "4px",
-                              cursor: "pointer"
-                            }}
-                          >
-                            Reddet
-                          </button>
-                        </>
-                      )}
-                      {bildirim.durum === "inceleniyor" && (
-                        <>
-                          <button
-                            onClick={() => {
-                              const cozumNotu = prompt("Çözüm notu ekleyin:");
-                              if (cozumNotu !== null) {
-                                updateDurum(bildirim.id, "cozuldu", cozumNotu);
-                              }
-                            }}
-                            style={{
-                              padding: "8px 16px",
-                              fontSize: "13px",
-                              backgroundColor: "#10b981",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "6px",
-                              cursor: "pointer",
-                              fontWeight: "500",
-                              transition: "all 0.2s",
-                              boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
-                            }}
-                            onMouseEnter={(e) => {
-                              e.target.style.backgroundColor = "#059669";
-                              e.target.style.transform = "translateY(-1px)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.target.style.backgroundColor = "#10b981";
-                              e.target.style.transform = "translateY(0)";
-                            }}
-                          >
-                            Çözüldü
-                          </button>
-                          <button
-                            onClick={() => {
-                              const redNotu = prompt("Red nedeni:");
-                              if (redNotu !== null) {
-                                updateDurum(bildirim.id, "reddedildi", redNotu);
-                              }
-                            }}
-                            style={{
-                              padding: "8px 16px",
-                              fontSize: "13px",
-                              backgroundColor: "#ef4444",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "6px",
-                              cursor: "pointer",
-                              fontWeight: "500",
-                              transition: "all 0.2s",
-                              boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
-                            }}
-                            onMouseEnter={(e) => {
-                              e.target.style.backgroundColor = "#dc2626";
-                              e.target.style.transform = "translateY(-1px)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.target.style.backgroundColor = "#ef4444";
-                              e.target.style.transform = "translateY(0)";
-                            }}
-                          >
-                            Reddet
-                          </button>
-                        </>
-                      )}
-                      {(bildirim.durum === "cozuldu" || bildirim.durum === "reddedildi") && (
-                        <span style={{ fontSize: "12px", color: "#6b7280" }}>
-                          {bildirim.cozum_tarihi && 
-                            format(new Date(bildirim.cozum_tarihi), "dd.MM.yyyy HH:mm")
-                          }
-                        </span>
-                                             )}
-                     </div>
-                   </td>
-                   )}
-                 </tr>
+                    <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151" }}>
+                      {renderAdminActions(bildirim)}
+                    </td>
+                  )}
+                </tr>
               ))}
             </tbody>
           </table>
