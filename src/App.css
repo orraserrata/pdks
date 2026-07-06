@@ -867,3 +867,310 @@
     width: 100%;
   }
 }
+
+/* Personel Yönetimi — mobil */
+.personel-add-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.personel-add-title {
+  margin: 0 0 14px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.personel-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.personel-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.personel-form-field--full {
+  grid-column: 1 / -1;
+}
+
+.personel-form-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.personel-form-field input,
+.personel-form-field select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.personel-form-field input:focus,
+.personel-form-field select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.personel-form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.personel-form-checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb;
+}
+
+.personel-add-submit {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #2563eb;
+  color: #fff;
+}
+
+.personel-add-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.personel-form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.personel-error {
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.personel-filter-bar {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.personel-filter-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.personel-filter-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.personel-filter-btn--active {
+  color: #fff;
+}
+
+.personel-mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.personel-collapsed-card {
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.personel-collapsed-card:active {
+  transform: scale(0.99);
+  border-color: #93c5fd;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
+}
+
+.personel-collapsed-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.personel-collapsed-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.personel-collapsed-card-id {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.personel-collapsed-card-hint {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.personel-status-badge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.personel-status-badge--active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.personel-status-badge--inactive {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.personel-empty {
+  text-align: center;
+  padding: 24px 16px;
+  color: #6b7280;
+  font-size: 14px;
+  background: #f9fafb;
+  border: 1px dashed #d1d5db;
+  border-radius: 12px;
+}
+
+.personel-detail-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.personel-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.personel-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.personel-detail-item--full {
+  grid-column: 1 / -1;
+}
+
+.personel-detail-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.personel-detail-value {
+  font-size: 15px;
+  color: #111827;
+  word-break: break-word;
+}
+
+.personel-detail-actions,
+.personel-form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.personel-detail-actions .btn-primary,
+.personel-detail-actions .btn-secondary,
+.personel-detail-actions .btn-ghost,
+.personel-form-actions .btn-primary,
+.personel-form-actions .btn-secondary {
+  width: 100%;
+  padding: 11px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.personel-detail-actions .btn-primary,
+.personel-form-actions .btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.personel-detail-actions .btn-secondary,
+.personel-form-actions .btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.personel-detail-actions .btn-ghost {
+  background: transparent;
+  color: #dc2626;
+  border: 1px dashed #fca5a5;
+}
+
+.personel-detail-actions .btn-primary:active,
+.personel-detail-actions .btn-secondary:active,
+.personel-detail-actions .btn-ghost:active,
+.personel-form-actions .btn-primary:active,
+.personel-form-actions .btn-secondary:active {
+  transform: scale(0.98);
+}
+
+.personel-delete-btn {
+  margin-top: 4px;
+}

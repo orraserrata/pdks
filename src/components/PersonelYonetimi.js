@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { ensureMaasAyari, syncMaasAyariAktif } from "../utils/maasAyarlari";
 import { CALISMA_TIPI_OPTIONS, getCalismaTipiLabel } from "../utils/yillikIzin";
+import Modal from "./Modal";
 
 const MAAS_TIPI_OPTIONS = [
   { value: "saatli", label: "Saatli Maaş" },
@@ -30,6 +31,10 @@ export default function PersonelYonetimi({ onChanged }) {
   const [personeller, setPersoneller] = useState([]);
   const [filter, setFilter] = useState("active");
   const [editingId, setEditingId] = useState(null);
+  const [detailPersonel, setDetailPersonel] = useState(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches
+  );
   const [editForm, setEditForm] = useState({
     isim: "",
     soyisim: "",
@@ -52,6 +57,13 @@ export default function PersonelYonetimi({ onChanged }) {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, sess) => setSession(sess));
     return () => sub.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const onChange = (e) => setIsMobileViewport(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
   }, []);
 
   // Kullanıcı profilini yükle
@@ -363,6 +375,7 @@ export default function PersonelYonetimi({ onChanged }) {
         }
 
         setEditingId(null);
+        setDetailPersonel(null);
         setEditForm({ isim: "", soyisim: "", ise_giris_tarihi: "", aktif: true, maas_tipi: "saatli", calisma_tipi: "full_time" });
         await reloadPersoneller();
 
@@ -375,6 +388,118 @@ export default function PersonelYonetimi({ onChanged }) {
     }
   }
 
+  function openEditPersonel(p) {
+    setEditingId(p.kullanici_id);
+    setEditForm({
+      isim: p.isim || "",
+      soyisim: p.soyisim || "",
+      ise_giris_tarihi: p.ise_giris_tarihi || "",
+      aktif: p.aktif || true,
+      maas_tipi: p.maas_tipi || "saatli",
+      calisma_tipi: p.calisma_tipi || "full_time",
+    });
+    setDetailPersonel(null);
+  }
+
+  function closeEditPersonel() {
+    setEditingId(null);
+    setEditForm({ isim: "", soyisim: "", ise_giris_tarihi: "", aktif: true, maas_tipi: "saatli", calisma_tipi: "full_time" });
+  }
+
+
+  const renderFilterButtons = () => (
+    <div className="personel-filter-bar force-wrap">
+      <span className="personel-filter-label">Personel Durumu:</span>
+      {[
+        { value: "active", label: "Aktif", activeColor: "#10b981" },
+        { value: "inactive", label: "Pasif", activeColor: "#f59e0b" },
+        { value: "all", label: "Tümü", activeColor: "#3b82f6" },
+      ].map((f) => (
+        <button
+          key={f.value}
+          type="button"
+          onClick={() => setFilter(f.value)}
+          className={`personel-filter-btn${filter === f.value ? " personel-filter-btn--active" : ""}`}
+          style={filter === f.value ? { backgroundColor: f.activeColor, borderColor: f.activeColor, color: "white" } : undefined}
+        >
+          {f.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderEditFormFields = (onSubmit, onCancel) => (
+    <form onSubmit={onSubmit} className="personel-form">
+      <div className="personel-form-grid">
+        <div className="personel-form-field">
+          <label>İsim</label>
+          <input
+            type="text"
+            value={editForm.isim}
+            onChange={(e) => setEditForm((prev) => ({ ...prev, isim: e.target.value }))}
+            required
+          />
+        </div>
+        <div className="personel-form-field">
+          <label>Soyisim</label>
+          <input
+            type="text"
+            value={editForm.soyisim}
+            onChange={(e) => setEditForm((prev) => ({ ...prev, soyisim: e.target.value }))}
+            required
+          />
+        </div>
+        <div className="personel-form-field personel-form-field--full">
+          <label>İşe Giriş Tarihi</label>
+          <input
+            type="date"
+            value={editForm.ise_giris_tarihi}
+            onChange={(e) => setEditForm((prev) => ({ ...prev, ise_giris_tarihi: e.target.value }))}
+            required
+          />
+        </div>
+        <div className="personel-form-field">
+          <label>Maaş Tipi</label>
+          <select
+            value={editForm.maas_tipi}
+            onChange={(e) => setEditForm((prev) => ({ ...prev, maas_tipi: e.target.value }))}
+          >
+            {MAAS_TIPI_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="personel-form-field">
+          <label>Çalışma Tipi</label>
+          <select
+            value={editForm.calisma_tipi}
+            onChange={(e) => setEditForm((prev) => ({ ...prev, calisma_tipi: e.target.value }))}
+          >
+            {CALISMA_TIPI_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <label className="personel-form-checkbox">
+        <input
+          type="checkbox"
+          checked={editForm.aktif}
+          onChange={(e) => setEditForm((prev) => ({ ...prev, aktif: e.target.checked }))}
+        />
+        Aktif personel
+      </label>
+      <div className="personel-form-actions">
+        <button type="submit" className="btn-primary" disabled={loading}>
+          {loading ? "Kaydediliyor..." : "Kaydet"}
+        </button>
+        <button type="button" className="btn-secondary" onClick={onCancel}>
+          İptal
+        </button>
+      </div>
+    </form>
+  );
+
   return (
     <div style={{ marginBottom: 20 }}>
       <h2>Personel Yönetimi</h2>
@@ -383,6 +508,64 @@ export default function PersonelYonetimi({ onChanged }) {
         <>
                      {/* Personel Ekleme Formu - Sadece Admin */}
            {userProfile && userProfile.is_admin && (
+            isMobileViewport ? (
+              <form onSubmit={handleSubmit} className="personel-add-card">
+                <h3 className="personel-add-title">Yeni Personel Ekle</h3>
+                <div className="personel-form-grid">
+                  <div className="personel-form-field">
+                    <label htmlFor="add-kullanici-id">Kullanıcı ID</label>
+                    <input
+                      id="add-kullanici-id"
+                      type="number"
+                      name="kullanici_id"
+                      value={form.kullanici_id}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="personel-form-field">
+                    <label htmlFor="add-isim">İsim</label>
+                    <input id="add-isim" type="text" name="isim" value={form.isim} onChange={handleChange} required />
+                  </div>
+                  <div className="personel-form-field">
+                    <label htmlFor="add-soyisim">Soyisim</label>
+                    <input id="add-soyisim" type="text" name="soyisim" value={form.soyisim} onChange={handleChange} required />
+                  </div>
+                  <div className="personel-form-field personel-form-field--full">
+                    <label htmlFor="add-ise-giris">İşe Giriş Tarihi</label>
+                    <input id="add-ise-giris" type="date" name="ise_giris_tarihi" value={form.ise_giris_tarihi} onChange={handleChange} required />
+                  </div>
+                  <div className="personel-form-field">
+                    <label htmlFor="add-maas-tipi">Maaş Tipi</label>
+                    <select id="add-maas-tipi" name="maas_tipi" value={form.maas_tipi} onChange={handleChange}>
+                      {MAAS_TIPI_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="personel-form-field">
+                    <label htmlFor="add-calisma-tipi">Çalışma Tipi</label>
+                    <select id="add-calisma-tipi" name="calisma_tipi" value={form.calisma_tipi} onChange={handleChange}>
+                      {CALISMA_TIPI_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <label className="personel-form-checkbox">
+                  <input
+                    type="checkbox"
+                    name="aktif"
+                    checked={form.aktif}
+                    onChange={(e) => setForm((prev) => ({ ...prev, aktif: e.target.checked }))}
+                  />
+                  Aktif personel
+                </label>
+                <button type="submit" className="btn-primary personel-add-submit" disabled={loading || !isValid}>
+                  {loading ? "Ekleniyor..." : "Personel Ekle"}
+                </button>
+              </form>
+            ) : (
             <form onSubmit={handleSubmit} className="responsive-flex" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
             <label>
               Kullanıcı ID
@@ -468,65 +651,44 @@ export default function PersonelYonetimi({ onChanged }) {
               {loading ? "Ekleniyor..." : "Ekle"}
             </button>
           </form>
+            )
           )}
 
-          {error && <div style={{ color: "red", marginTop: 8 }}>{error}</div>}
+          {error && <div className="personel-error">{error}</div>}
 
-          {/* Filtreleme Butonları */}
-          <div className="force-wrap" style={{ marginTop: "20px", display: "flex", gap: "8px", alignItems: "center" }}>
-            <span style={{ fontSize: "14px", fontWeight: "500", color: "#374151" }}>Personel Durumu:</span>
-            <button
-              onClick={() => setFilter("active")}
-              style={{
-                padding: "6px 12px",
-                fontSize: "13px",
-                backgroundColor: filter === "active" ? "#10b981" : "#f3f4f6",
-                color: filter === "active" ? "white" : "#374151",
-                border: "1px solid #d1d5db",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontWeight: "500",
-                transition: "all 0.2s"
-              }}
-            >
-              Aktif
-            </button>
-            <button
-              onClick={() => setFilter("inactive")}
-              style={{
-                padding: "6px 12px",
-                fontSize: "13px",
-                backgroundColor: filter === "inactive" ? "#f59e0b" : "#f3f4f6",
-                color: filter === "inactive" ? "white" : "#374151",
-                border: "1px solid #d1d5db",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontWeight: "500",
-                transition: "all 0.2s"
-              }}
-            >
-              Pasif
-            </button>
-            <button
-              onClick={() => setFilter("all")}
-              style={{
-                padding: "6px 12px",
-                fontSize: "13px",
-                backgroundColor: filter === "all" ? "#3b82f6" : "#f3f4f6",
-                color: filter === "all" ? "white" : "#374151",
-                border: "1px solid #d1d5db",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontWeight: "500",
-                transition: "all 0.2s"
-              }}
-            >
-              Tümü
-            </button>
-          </div>
+          {renderFilterButtons()}
 
           {/* Personel Listesi */}
           <div style={{ marginTop: "20px" }}>
+            {isMobileViewport ? (
+              <div className="personel-mobile-list">
+                {personeller.length === 0 ? (
+                  <div className="personel-empty">Personel bulunamadı.</div>
+                ) : (
+                  personeller.map((p) => (
+                    <button
+                      key={p.kullanici_id}
+                      type="button"
+                      className="personel-collapsed-card"
+                      onClick={() => setDetailPersonel(p)}
+                    >
+                      <div className="personel-collapsed-card-top">
+                        <div>
+                          <div className="personel-collapsed-card-name">
+                            {p.isim} {p.soyisim}
+                          </div>
+                          <div className="personel-collapsed-card-id">ID: {p.kullanici_id}</div>
+                        </div>
+                        <span className={`personel-status-badge${p.aktif ? " personel-status-badge--active" : " personel-status-badge--inactive"}`}>
+                          {p.aktif ? "Aktif" : "Pasif"}
+                        </span>
+                      </div>
+                      <div className="personel-collapsed-card-hint">Detay için dokunun</div>
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : (
             <table className="mobile-table" style={{ width: "100%", borderCollapse: "collapse", backgroundColor: "white", borderRadius: "8px", overflow: "hidden", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)" }}>
               <thead>
                 <tr style={{ backgroundColor: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
@@ -596,89 +758,12 @@ export default function PersonelYonetimi({ onChanged }) {
                     {userProfile && userProfile.is_admin && (
                       <td data-label="İşlemler" style={{ padding: "12px 16px", fontSize: "14px" }}>
                       <div className="force-wrap" style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                      {editingId === p.kullanici_id ? (
-                        <form onSubmit={handleEditSubmit} style={{ display: "flex", gap: "4px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                          <input
-                            type="text"
-                            value={editForm.isim}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, isim: e.target.value }))}
-                            placeholder="İsim"
-                            style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px", width: "80px" }}
-                          />
-                          <input
-                            type="text"
-                            value={editForm.soyisim}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, soyisim: e.target.value }))}
-                            placeholder="Soyisim"
-                            style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px", width: "80px" }}
-                          />
-                          <input
-                            type="date"
-                            value={editForm.ise_giris_tarihi}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, ise_giris_tarihi: e.target.value }))}
-                            style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px" }}
-                          />
-                          <select
-                            value={editForm.maas_tipi}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, maas_tipi: e.target.value }))}
-                            style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px" }}
-                          >
-                            {MAAS_TIPI_OPTIONS.map((opt) => (
-                              <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                          </select>
-                          <select
-                            value={editForm.calisma_tipi}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, calisma_tipi: e.target.value }))}
-                            style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px" }}
-                          >
-                            {CALISMA_TIPI_OPTIONS.map((opt) => (
-                              <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                          </select>
-                          <label style={{ display: "flex", alignItems: "center", fontSize: "12px" }}>
-                            <input
-                              type="checkbox"
-                              checked={editForm.aktif}
-                              onChange={(e) => setEditForm(prev => ({ ...prev, aktif: e.target.checked }))}
-                              style={{ marginRight: "4px" }}
-                            />
-                            Aktif
-                          </label>
-                          <button
-                            type="submit"
-                            disabled={loading}
-                            style={{
-                              padding: "4px 8px",
-                              fontSize: "12px",
-                              backgroundColor: "#10b981",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "4px",
-                              cursor: loading ? "not-allowed" : "pointer"
-                            }}
-                          >
-                            Kaydet
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingId(null)}
-                            style={{
-                              padding: "4px 8px",
-                              fontSize: "12px",
-                              backgroundColor: "#6b7280",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "4px",
-                              cursor: "pointer"
-                            }}
-                          >
-                            İptal
-                          </button>
-                        </form>
+                      {editingId === p.kullanici_id && !isMobileViewport ? (
+                        renderEditFormFields(handleEditSubmit, closeEditPersonel)
                       ) : (
                         <>
                           <button
+                            type="button"
                             onClick={() => handleToggleStatus(p.kullanici_id, p.aktif)}
                             style={{
                               padding: "8px 16px",
@@ -704,17 +789,8 @@ export default function PersonelYonetimi({ onChanged }) {
                             {p.aktif ? "Pasif Yap" : "Aktif Yap"}
                           </button>
                           <button
-                            onClick={() => {
-                              setEditingId(p.kullanici_id);
-                              setEditForm({
-                                isim: p.isim || "",
-                                soyisim: p.soyisim || "",
-                                ise_giris_tarihi: p.ise_giris_tarihi || "",
-                                aktif: p.aktif || true,
-                                maas_tipi: p.maas_tipi || "saatli",
-                                calisma_tipi: p.calisma_tipi || "full_time",
-                              });
-                            }}
+                            type="button"
+                            onClick={() => openEditPersonel(p)}
                             style={{
                               padding: "8px 16px",
                               fontSize: "13px",
@@ -772,7 +848,79 @@ export default function PersonelYonetimi({ onChanged }) {
                 ))}
               </tbody>
             </table>
+            )}
           </div>
+
+          <Modal
+            open={isMobileViewport && !!detailPersonel}
+            onClose={() => setDetailPersonel(null)}
+            title={detailPersonel ? `${detailPersonel.isim || ""} ${detailPersonel.soyisim || ""}`.trim() : "Personel Detayı"}
+          >
+            {detailPersonel && (
+              <div className="personel-detail-dialog">
+                <div className="personel-detail-grid">
+                  <div className="personel-detail-item">
+                    <span className="personel-detail-label">Kullanıcı ID</span>
+                    <span className="personel-detail-value">{detailPersonel.kullanici_id}</span>
+                  </div>
+                  <div className="personel-detail-item">
+                    <span className="personel-detail-label">Durum</span>
+                    <span className={`personel-status-badge${detailPersonel.aktif ? " personel-status-badge--active" : " personel-status-badge--inactive"}`}>
+                      {detailPersonel.aktif ? "Aktif" : "Pasif"}
+                    </span>
+                  </div>
+                  <div className="personel-detail-item personel-detail-item--full">
+                    <span className="personel-detail-label">İşe Giriş</span>
+                    <span className="personel-detail-value">{detailPersonel.ise_giris_tarihi}</span>
+                  </div>
+                  <div className="personel-detail-item">
+                    <span className="personel-detail-label">Maaş Tipi</span>
+                    <span className="personel-detail-value">{getMaasTipiLabel(detailPersonel.maas_tipi || "saatli")}</span>
+                  </div>
+                  <div className="personel-detail-item">
+                    <span className="personel-detail-label">Çalışma Tipi</span>
+                    <span className="personel-detail-value">{getCalismaTipiLabel(detailPersonel.calisma_tipi || "full_time")}</span>
+                  </div>
+                </div>
+                {userProfile && userProfile.is_admin && (
+                <div className="personel-detail-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      handleToggleStatus(detailPersonel.kullanici_id, detailPersonel.aktif);
+                      setDetailPersonel(null);
+                    }}
+                  >
+                    {detailPersonel.aktif ? "Pasif Yap" : "Aktif Yap"}
+                  </button>
+                  <button type="button" className="btn-primary" onClick={() => openEditPersonel(detailPersonel)}>
+                    Düzenle
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost personel-delete-btn"
+                    onClick={() => {
+                      handleDeleteWithUndo(detailPersonel.kullanici_id);
+                      setDetailPersonel(null);
+                    }}
+                  >
+                    Sil
+                  </button>
+                </div>
+                )}
+              </div>
+            )}
+          </Modal>
+
+          <Modal
+            open={isMobileViewport && !!editingId}
+            onClose={closeEditPersonel}
+            title="Personel Düzenle"
+            zIndex={1100}
+          >
+            {editingId && renderEditFormFields(handleEditSubmit, closeEditPersonel)}
+          </Modal>
 
                      {/* Kullanıcı Profilleri Yönetimi - Sadece Admin */}
            {userProfile && userProfile.is_admin && (
