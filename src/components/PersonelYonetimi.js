@@ -454,7 +454,7 @@ export default function PersonelYonetimi({ onChanged }) {
               <form onSubmit={handleSubmit} className="personel-add-card">
                 <h3 className="personel-add-title">Yeni Personel Ekle</h3>
                 <div className="personel-form-grid">
-                  <div className="personel-form-field">
+                  <div className="personel-form-field personel-form-field--full">
                     <label htmlFor="add-kullanici-id">Kullanıcı ID</label>
                     <input
                       id="add-kullanici-id"
@@ -697,27 +697,8 @@ export default function PersonelYonetimi({ onChanged }) {
                         <>
                           <button
                             type="button"
+                            className={`btn-toggle-status${p.aktif ? " btn-toggle-status--deactivate" : " btn-toggle-status--activate"}`}
                             onClick={() => handleToggleStatus(p.kullanici_id, p.aktif)}
-                            style={{
-                              padding: "8px 16px",
-                              fontSize: "13px",
-                              backgroundColor: p.aktif ? "#f59e0b" : "#10b981",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "6px",
-                              cursor: "pointer",
-                              fontWeight: "500",
-                              transition: "all 0.2s",
-                              boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
-                            }}
-                            onMouseEnter={(e) => {
-                              e.target.style.backgroundColor = p.aktif ? "#d97706" : "#059669";
-                              e.target.style.transform = "translateY(-1px)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.target.style.backgroundColor = p.aktif ? "#f59e0b" : "#10b981";
-                              e.target.style.transform = "translateY(0)";
-                            }}
                           >
                             {p.aktif ? "Pasif Yap" : "Aktif Yap"}
                           </button>
@@ -819,7 +800,7 @@ export default function PersonelYonetimi({ onChanged }) {
                 <div className="personel-detail-actions">
                   <button
                     type="button"
-                    className="btn-secondary"
+                    className={`btn-toggle-status${detailPersonel.aktif ? " btn-toggle-status--deactivate" : " btn-toggle-status--activate"}`}
                     onClick={() => {
                       handleToggleStatus(detailPersonel.kullanici_id, detailPersonel.aktif);
                       setDetailPersonel(null);

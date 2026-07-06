@@ -209,39 +209,31 @@ function TumCalisanlar() {
         </button>
       </div>
 
-      <div className="responsive-flex" style={{ display: "flex", gap: "12px", alignItems: "flex-end", flexWrap: "wrap", marginBottom: "20px" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151" }}>Başlangıç:</label>
-          <input 
-            type="date" 
-            value={baslangic} 
-            onChange={(e) => setBaslangic(e.target.value)}
-            style={{ padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: "6px" }}
-          />
+      <div className="rapor-toolbar">
+        <div className="calisan-date-filters">
+          <div className="calisan-date-field">
+            <label>Başlangıç</label>
+            <input
+              type="date"
+              value={baslangic}
+              onChange={(e) => setBaslangic(e.target.value)}
+            />
+          </div>
+          <div className="calisan-date-field">
+            <label>Bitiş</label>
+            <input
+              type="date"
+              value={bitis}
+              onChange={(e) => setBitis(e.target.value)}
+            />
+          </div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151" }}>Bitiş:</label>
-          <input 
-            type="date" 
-            value={bitis} 
-            onChange={(e) => setBitis(e.target.value)}
-            style={{ padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: "6px" }}
-          />
-        </div>
-        <button 
+        <button
+          type="button"
           onClick={handlePrint}
-          style={{ 
-            padding: "10px 16px", 
-            backgroundColor: "#007bff", 
-            color: "white", 
-            border: "none", 
-            borderRadius: "6px", 
-            cursor: "pointer",
-            fontWeight: "600",
-            minHeight: "44px"
-          }}
+          className="rapor-print-btn"
         >
-          🖨️ Yazdır
+          Yazdır
         </button>
       </div>
 

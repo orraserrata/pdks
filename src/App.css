@@ -876,6 +876,17 @@
   padding: 16px;
   margin-bottom: 16px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.personel-form {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .personel-add-title {
@@ -887,8 +898,10 @@
 
 .personel-form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .personel-form-field {
@@ -896,6 +909,7 @@
   flex-direction: column;
   gap: 6px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .personel-form-field--full {
@@ -912,6 +926,7 @@
 .personel-form-field select {
   width: 100%;
   min-width: 0;
+  max-width: 100%;
   padding: 10px 12px;
   border: 1px solid #d1d5db;
   border-radius: 10px;
@@ -919,6 +934,12 @@
   color: #111827;
   background: #fff;
   box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.personel-form-field input[type="date"] {
+  padding: 10px 8px;
 }
 
 .personel-form-field input:focus,
@@ -926,6 +947,40 @@
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+@media (max-width: 768px) {
+  .personel-form-field input[type="date"] {
+    font-size: 13px;
+    padding: 10px 6px;
+  }
+}
+
+/* Çalışan raporu — tarih aralığı */
+.rapor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 20px;
+}
+
+.rapor-toolbar .calisan-date-filters {
+  flex: 1;
+  min-width: min(100%, 260px);
+  margin-bottom: 0;
+}
+
+.rapor-print-btn {
+  padding: 10px 16px;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 44px;
+  white-space: nowrap;
 }
 
 .personel-form-checkbox {
@@ -1169,6 +1224,49 @@
 .personel-form-actions .btn-primary:active,
 .personel-form-actions .btn-secondary:active {
   transform: scale(0.98);
+}
+
+.btn-toggle-status {
+  padding: 11px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s, background-color 0.15s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-toggle-status--deactivate {
+  background: #f59e0b;
+}
+
+.btn-toggle-status--deactivate:hover {
+  background: #d97706;
+}
+
+.btn-toggle-status--activate {
+  background: #10b981;
+}
+
+.btn-toggle-status--activate:hover {
+  background: #059669;
+}
+
+.btn-toggle-status:active {
+  transform: scale(0.98);
+}
+
+.personel-detail-actions .btn-toggle-status {
+  width: 100%;
+}
+
+table .btn-toggle-status {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
 }
 
 .personel-collapsed-card--name-only {
