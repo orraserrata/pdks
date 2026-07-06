@@ -1764,20 +1764,68 @@ table .btn-toggle-status {
 }
 
 .hata-bildirim-list {
-  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 4px;
 }
 
 .hata-bildirim-item {
-  padding: 16px 0;
-  border-bottom: 1px solid #e5e7eb;
-  background: transparent;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  transition: opacity 0.2s, box-shadow 0.2s;
 }
 
-.hata-bildirim-item--selected {
-  background: #f8fbff;
-  margin: 0 -12px;
-  padding-left: 12px;
-  padding-right: 12px;
+.hata-bildirim-item--open {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+}
+
+.hata-bildirim-item--beklemede {
+  border-left: 4px solid #f59e0b;
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.hata-bildirim-item--inceleniyor {
+  border-left: 4px solid #3b82f6;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.hata-bildirim-item--closed {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+  opacity: 0.65;
+}
+
+.hata-bildirim-item--closed .hata-bildirim-item-date,
+.hata-bildirim-item--closed .hata-bildirim-value,
+.hata-bildirim-item--closed .hata-bildirim-value--multiline,
+.hata-bildirim-item--closed .hata-bildirim-value--note {
+  color: #9ca3af;
+}
+
+.hata-bildirim-item--closed .hata-bildirim-label,
+.hata-bildirim-item--closed .hata-bildirim-item-times,
+.hata-bildirim-item--closed .hata-bildirim-sub,
+.hata-bildirim-item--closed .hata-bildirim-meta {
+  color: #d1d5db;
+}
+
+.hata-bildirim-item--closed .hata-bildirim-status {
+  opacity: 0.8;
+}
+
+.hata-bildirim-item--selected.hata-bildirim-item--open {
+  background: #f0f7ff;
+  box-shadow: 0 0 0 2px #93c5fd;
+}
+
+.hata-bildirim-item--selected.hata-bildirim-item--closed {
+  opacity: 0.78;
+  background: #f3f4f6;
 }
 
 .hata-bildirim-item-header {
@@ -1911,4 +1959,47 @@ table .btn-toggle-status {
     flex: 1 1 calc(50% - 4px);
     min-width: 120px;
   }
+}
+
+/* Hata Bildirimleri — masaüstü tablo satırları */
+.hata-bildirim-row {
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.hata-bildirim-row--open {
+  background: #fff;
+}
+
+.hata-bildirim-row--beklemede {
+  background: #fffbeb;
+  box-shadow: inset 4px 0 0 #f59e0b;
+}
+
+.hata-bildirim-row--inceleniyor {
+  background: #eff6ff;
+  box-shadow: inset 4px 0 0 #3b82f6;
+}
+
+.hata-bildirim-row--closed {
+  background: #f9fafb;
+  opacity: 0.65;
+  color: #9ca3af;
+}
+
+.hata-bildirim-row--closed td {
+  color: #9ca3af !important;
+}
+
+.hata-bildirim-row--closed td div {
+  color: inherit;
+}
+
+.hata-bildirim-row--selected.hata-bildirim-row--open {
+  background: #eff6ff !important;
+}
+
+.hata-bildirim-row--selected.hata-bildirim-row--closed {
+  background: #f3f4f6 !important;
+  opacity: 0.78;
 }

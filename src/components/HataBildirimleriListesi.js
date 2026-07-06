@@ -324,10 +324,15 @@ export default function HataBildirimleriListesi() {
 
   function renderMobileBildirimItem(bildirim) {
     const isClosed = bildirim.durum === "cozuldu" || bildirim.durum === "reddedildi";
+    const statusClass = isClosed
+      ? " hata-bildirim-item--closed"
+      : ` hata-bildirim-item--open hata-bildirim-item--${bildirim.durum}`;
+    const selectedClass = selectedIds.includes(bildirim.id) ? " hata-bildirim-item--selected" : "";
+
     return (
       <article
         key={bildirim.id}
-        className={`hata-bildirim-item${selectedIds.includes(bildirim.id) ? " hata-bildirim-item--selected" : ""}`}
+        className={`hata-bildirim-item${statusClass}${selectedClass}`}
       >
         <div className="hata-bildirim-item-header">
           {userProfile?.is_admin && (
@@ -662,12 +667,18 @@ export default function HataBildirimleriListesi() {
               </tr>
             </thead>
             <tbody>
-              {bildirimler.map((bildirim) => (
-                <tr key={bildirim.id} style={{ 
-                  borderBottom: "1px solid rgb(0, 0, 0)",
-                  transition: "background-color 0.2s",
-                  backgroundColor: selectedIds.includes(bildirim.id) ? "#eff6ff" : "white",
-                }}>
+              {bildirimler.map((bildirim) => {
+                const isClosed = bildirim.durum === "cozuldu" || bildirim.durum === "reddedildi";
+                const rowStatusClass = isClosed
+                  ? " hata-bildirim-row--closed"
+                  : ` hata-bildirim-row--open hata-bildirim-row--${bildirim.durum}`;
+                const rowSelectedClass = selectedIds.includes(bildirim.id) ? " hata-bildirim-row--selected" : "";
+
+                return (
+                <tr
+                  key={bildirim.id}
+                  className={`hata-bildirim-row${rowStatusClass}${rowSelectedClass}`}
+                >
                   {userProfile?.is_admin && (
                     <td style={{ padding: "16px 8px", textAlign: "center" }}>
                       <input
@@ -766,7 +777,8 @@ export default function HataBildirimleriListesi() {
                     </td>
                   )}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
