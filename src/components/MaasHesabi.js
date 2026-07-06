@@ -85,8 +85,9 @@ const MaasHesabi = () => {
   }, []);
 
   useEffect(() => {
+    if (maasAyarlari.length === 0) return;
     fetchMaasRaporu();
-  }, [selectedMonth, selectedYear, hedefAyarlari]);
+  }, [selectedMonth, selectedYear, hedefAyarlari, maasAyarlari]);
 
   const loadHedefAyarlari = async () => {
     const { hedefler, error } = await fetchMaasHedefleri();
@@ -148,44 +149,44 @@ const MaasHesabi = () => {
   const fetchMaasRaporu = async () => {
     try {
       setLoading(true);
-      
-      const { data: maasData, error: maasError } = await supabase
-        .from('maas_ayarlari')
-        .select(`
-          *,
-          personel:kullanici_id (
-            kullanici_id,
-            isim,
-            soyisim,
-            maas_tipi
-          )
-        `)
-        .eq('aktif', true);
 
-      if (maasError) throw maasError;
+      const maasData = maasAyarlari;
+      if (!maasData.length) return;
+
+      const monthStart = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-01`;
+      let endYear = selectedYear;
+      let endMonth = selectedMonth + 1;
+      if (endMonth > 12) {
+        endMonth = 1;
+        endYear += 1;
+      }
+      const monthEnd = `${endYear}-${endMonth.toString().padStart(2, '0')}-01`;
+
+      const { data: tumKayitlar, error: calismaError } = await supabase
+        .from('personel_giris_cikis_duzenli')
+        .select('kullanici_id, giris_tarihi, cikis_tarihi, workday_date')
+        .gte('giris_tarihi', monthStart)
+        .lt('giris_tarihi', monthEnd);
+
+      if (calismaError) throw calismaError;
+
+      const kayitlarByUser = {};
+      (tumKayitlar || []).forEach((record) => {
+        if (!kayitlarByUser[record.kullanici_id]) {
+          kayitlarByUser[record.kullanici_id] = [];
+        }
+        kayitlarByUser[record.kullanici_id].push(record);
+      });
 
       const raporData = [];
-      
-      for (const maas of maasData || []) {
+
+      for (const maas of maasData) {
         const maasTipi = getPersonelMaasTipi(maas.personel);
-
-        const { data: calismaData, error: calismaError } = await supabase
-          .from('personel_giris_cikis_duzenli')
-          .select('giris_tarihi, cikis_tarihi, workday_date')
-          .eq('kullanici_id', maas.kullanici_id)
-          .gte('giris_tarihi', `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-01`)
-          .lt('giris_tarihi', `${selectedYear}-${(selectedMonth + 1).toString().padStart(2, '0')}-01`);
-
-        if (calismaError) {
-          console.error('Çalışma verisi yükleme hatası:', calismaError);
-          continue;
-        }
+        const calismaData = kayitlarByUser[maas.kullanici_id] || [];
 
         if (maasTipi === 'gunluk') {
-          // Tüm Çalışanlar raporu ile aynı mantık: giriş/çıkış eksik olsa da
-          // o iş gününde kayıt varsa tam gün sayılır
           const gunler = new Set();
-          calismaData?.forEach((record) => {
+          calismaData.forEach((record) => {
             const day = record.workday_date || record.giris_tarihi?.split('T')[0];
             if (day) gunler.add(day);
           });
@@ -210,7 +211,7 @@ const MaasHesabi = () => {
           });
         } else {
           let toplamSaat = 0;
-          calismaData?.forEach((record) => {
+          calismaData.forEach((record) => {
             if (record.cikis_tarihi) {
               const giris = new Date(record.giris_tarihi);
               const cikis = new Date(record.cikis_tarihi);
