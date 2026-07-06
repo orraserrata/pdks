@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
+import Modal from './Modal';
 import {
   fetchMaasHedefleri,
   saveMaasHedef,
@@ -40,6 +41,8 @@ const MaasHesabi = () => {
   // Maaş raporu için state'ler
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [detailRapor, setDetailRapor] = useState(null);
+  const [detailAyar, setDetailAyar] = useState(null);
 
   const months = [
     { value: 1, label: 'Ocak' },
@@ -324,6 +327,7 @@ const MaasHesabi = () => {
       alert('Maaş ayarı başarıyla güncellendi');
       setEditingSalary(null);
       setNewSalary('');
+      setDetailAyar(null);
       fetchMaasAyarlari();
       fetchMaasRaporu();
     } catch (error) {
@@ -360,539 +364,435 @@ const MaasHesabi = () => {
     return `${wholeHours} saat ${minutes} dakika`;
   };
 
+  const getDisplayName = (isim, soyisim) => `${isim || ''} ${soyisim || ''}`.trim() || 'Personel';
+
   const handlePrint = () => {
-    const printContent = document.getElementById(`maas-raporu-tablosu-${reportMaasTipi}`);
-    if (printContent) {
-      const raporBaslik = isReportGunluk ? 'Gün Bazlı Maaş Raporu' : 'Saatlik Maaş Raporu';
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>${raporBaslik} - ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-              table { border-collapse: collapse; width: 100%; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #f5f5f5; font-weight: bold; }
-              .positive { color: #28a745; font-weight: bold; }
-              .negative { color: #dc3545; font-weight: bold; }
-            </style>
-          </head>
-          <body>
-            <h2>${raporBaslik} - ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}</h2>
-            ${printContent.outerHTML}
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.print();
-    }
+    const raporBaslik = isReportGunluk ? 'Gün Bazlı Maaş Raporu' : 'Saatlik Maaş Raporu';
+    const monthLabel = months.find(m => m.value === selectedMonth)?.label;
+    const rows = filteredMaasRaporu.map((rapor) => `
+      <tr>
+        <td>${rapor.kullanici_id}</td>
+        <td>${getDisplayName(rapor.isim, rapor.soyisim)}</td>
+        <td>${formatCurrency(rapor.aylik_maas)}</td>
+        <td>${formatHedef(rapor)}</td>
+        <td>${formatCalisilan(rapor)}</td>
+        <td>${formatCurrency(rapor.birim_ucret)}</td>
+        <td>${formatCurrency(rapor.hesaplanan_maas)}</td>
+        <td class="${rapor.fark >= 0 ? 'positive' : 'negative'}">${rapor.fark >= 0 ? '+' : ''}${formatCurrency(rapor.fark)}</td>
+      </tr>
+    `).join('');
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${raporBaslik} - ${monthLabel} ${selectedYear}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f5f5f5; font-weight: bold; }
+            .positive { color: #28a745; font-weight: bold; }
+            .negative { color: #dc3545; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <h2>${raporBaslik} - ${monthLabel} ${selectedYear}</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Kullanıcı ID</th>
+                <th>Ad Soyad</th>
+                <th>Aylık Maaş</th>
+                <th>${isReportGunluk ? 'Hedef Gün' : 'Hedef Saat'}</th>
+                <th>${isReportGunluk ? 'Çalışılan Gün' : 'Çalışılan Saat'}</th>
+                <th>${isReportGunluk ? 'Günlük Ücret' : 'Saatlik Ücret'}</th>
+                <th>Hesaplanan Maaş</th>
+                <th>Fark</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  const renderMaasTypeTabs = (activeTip, onChange, countFn) => (
+    <div className="maas-type-tabs">
+      {MAAS_TIPI_TABS.map((tab) => (
+        <button
+          key={tab.value}
+          type="button"
+          className={`maas-type-tab maas-type-tab--${tab.value}${activeTip === tab.value ? ' maas-type-tab--active' : ''}`}
+          onClick={() => onChange(tab.value)}
+        >
+          {tab.label}
+          <span className="maas-type-tab-count">({countFn(tab.value)})</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderRaporDetail = (rapor) => (
+    <div className="personel-detail-dialog">
+      <div className="personel-detail-grid">
+        <div className="personel-detail-item">
+          <span className="personel-detail-label">Kullanıcı ID</span>
+          <span className="personel-detail-value">{rapor.kullanici_id}</span>
+        </div>
+        <div className="personel-detail-item">
+          <span className="personel-detail-label">Aylık Maaş</span>
+          <span className="personel-detail-value">{formatCurrency(rapor.aylik_maas)}</span>
+        </div>
+        <div className="personel-detail-item">
+          <span className="personel-detail-label">{rapor.maas_tipi === 'gunluk' ? 'Hedef Gün' : 'Hedef Saat'}</span>
+          <span className="personel-detail-value">{formatHedef(rapor)}</span>
+        </div>
+        <div className="personel-detail-item">
+          <span className="personel-detail-label">{rapor.maas_tipi === 'gunluk' ? 'Çalışılan Gün' : 'Çalışılan Saat'}</span>
+          <span className="personel-detail-value">{formatCalisilan(rapor)}</span>
+        </div>
+        <div className="personel-detail-item">
+          <span className="personel-detail-label">{rapor.maas_tipi === 'gunluk' ? 'Günlük Ücret' : 'Saatlik Ücret'}</span>
+          <span className="personel-detail-value">{formatCurrency(rapor.birim_ucret)}</span>
+        </div>
+        <div className="personel-detail-item">
+          <span className="personel-detail-label">Hesaplanan Maaş</span>
+          <span className="personel-detail-value">{formatCurrency(rapor.hesaplanan_maas)}</span>
+        </div>
+        <div className="personel-detail-item personel-detail-item--full">
+          <span className="personel-detail-label">Fark</span>
+          <span className={`personel-detail-value${rapor.fark >= 0 ? ' maas-fark-positive' : ' maas-fark-negative'}`}>
+            {rapor.fark >= 0 ? '+' : ''}{formatCurrency(rapor.fark)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAyarDetail = (ayar) => {
+    const tip = getPersonelMaasTipi(ayar.personel);
+    const birimUcret = calcBirimUcret(ayar.aylik_maas, tip, hedefAyarlari);
+    const isEditing = editingSalary === ayar.kullanici_id;
+
+    return (
+      <div className="personel-detail-dialog">
+        <div className="personel-detail-grid">
+          <div className="personel-detail-item">
+            <span className="personel-detail-label">Kullanıcı ID</span>
+            <span className="personel-detail-value">{ayar.kullanici_id}</span>
+          </div>
+          <div className="personel-detail-item">
+            <span className="personel-detail-label">Maaş Tipi</span>
+            <span className="personel-detail-value">{tip === 'gunluk' ? 'Gün Bazlı' : 'Saatlik'}</span>
+          </div>
+          <div className="personel-detail-item personel-detail-item--full">
+            <span className="personel-detail-label">Aylık Maaş</span>
+            {isEditing ? (
+              <input
+                type="number"
+                value={newSalary}
+                onChange={(e) => setNewSalary(e.target.value)}
+                className="maas-dialog-input"
+                placeholder="Aylık maaş"
+              />
+            ) : (
+              <span className="personel-detail-value">{formatCurrency(ayar.aylik_maas)}</span>
+            )}
+          </div>
+          <div className="personel-detail-item">
+            <span className="personel-detail-label">{tip === 'gunluk' ? 'Günlük Ücret' : 'Saatlik Ücret'}</span>
+            <span className="personel-detail-value">{formatCurrency(birimUcret)}</span>
+          </div>
+          <div className="personel-detail-item">
+            <span className="personel-detail-label">Hedef</span>
+            <span className="personel-detail-value">
+              {getHedefDeger(tip, hedefAyarlari)} {tip === 'gunluk' ? 'gün' : 'saat'}
+            </span>
+          </div>
+        </div>
+        <div className="personel-detail-actions">
+          {isEditing ? (
+            <>
+              <button type="button" className="btn-primary" onClick={() => updateSalary(ayar.kullanici_id)}>
+                Kaydet
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setEditingSalary(null);
+                  setNewSalary('');
+                }}
+              >
+                İptal
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => {
+                setEditingSalary(ayar.kullanici_id);
+                setNewSalary(ayar.aylik_maas.toString());
+              }}
+            >
+              Düzenle
+            </button>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
     <div>
       <h2>Maaş Hesabı</h2>
-      
-      {/* Alt Sekmeler */}
-      <div style={{ marginBottom: '20px' }}>
-        <div className="responsive-flex" style={{ display: 'flex', gap: '10px', borderBottom: '1px solid #ddd' }}>
-          <button
-            onClick={() => setActiveSubTab('raporlar')}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: activeSubTab === 'raporlar' ? '#007bff' : 'transparent',
-              color: activeSubTab === 'raporlar' ? 'white' : '#007bff',
-              border: 'none',
-              borderBottom: activeSubTab === 'raporlar' ? '2px solid #007bff' : '2px solid transparent',
-              cursor: 'pointer',
-              fontWeight: '500'
-            }}
-          >
-            Maaş Raporları
-          </button>
-          <button
-            onClick={() => setActiveSubTab('ayarlar')}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: activeSubTab === 'ayarlar' ? '#007bff' : 'transparent',
-              color: activeSubTab === 'ayarlar' ? 'white' : '#007bff',
-              border: 'none',
-              borderBottom: activeSubTab === 'ayarlar' ? '2px solid #007bff' : '2px solid transparent',
-              cursor: 'pointer',
-              fontWeight: '500'
-            }}
-          >
-            Maaş Ayarları
-          </button>
-        </div>
+
+      <div className="maas-sub-tabs">
+        <button
+          type="button"
+          className={`maas-sub-tab${activeSubTab === 'raporlar' ? ' maas-sub-tab--active' : ''}`}
+          onClick={() => setActiveSubTab('raporlar')}
+        >
+          Maaş Raporları
+        </button>
+        <button
+          type="button"
+          className={`maas-sub-tab${activeSubTab === 'ayarlar' ? ' maas-sub-tab--active' : ''}`}
+          onClick={() => setActiveSubTab('ayarlar')}
+        >
+          Maaş Ayarları
+        </button>
       </div>
 
-      {/* Maaş Raporları Sekmesi */}
       {activeSubTab === 'raporlar' && (
         <div>
-          <div style={{ marginBottom: '20px' }}>
-            <div className="responsive-flex" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              {MAAS_TIPI_TABS.map((tab) => (
+          {renderMaasTypeTabs(reportMaasTipi, setReportMaasTipi, (tip) =>
+            maasRaporu.filter((r) => r.maas_tipi === tip).length
+          )}
+
+          <div className="maas-toolbar">
+            <div className="maas-toolbar-field">
+              <label htmlFor="maas-rapor-ay">Ay</label>
+              <select
+                id="maas-rapor-ay"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value, 10))}
+              >
+                {months.map((month) => (
+                  <option key={month.value} value={month.value}>{month.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="maas-toolbar-field">
+              <label htmlFor="maas-rapor-yil">Yıl</label>
+              <select
+                id="maas-rapor-yil"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
+              >
+                {years.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+            <button type="button" className="maas-btn maas-btn--primary" onClick={fetchMaasRaporu}>
+              Yenile
+            </button>
+            <button type="button" className="maas-btn maas-btn--success" onClick={handlePrint}>
+              Yazdır
+            </button>
+          </div>
+
+          <h3 className="maas-section-title">
+            {isReportGunluk ? 'Gün Bazlı Maaş Raporu' : 'Saatlik Maaş Raporu'}
+            {' — '}{months.find((m) => m.value === selectedMonth)?.label} {selectedYear}
+          </h3>
+
+          {loading ? (
+            <p>Yükleniyor...</p>
+          ) : filteredMaasRaporu.length === 0 ? (
+            <div className="personel-empty">Bu kategoride rapor verisi bulunmuyor.</div>
+          ) : (
+            <div className="personel-mobile-list">
+              {filteredMaasRaporu.map((rapor) => (
                 <button
-                  key={tab.value}
-                  onClick={() => setReportMaasTipi(tab.value)}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: reportMaasTipi === tab.value
-                      ? (tab.value === 'gunluk' ? '#4f46e5' : '#d97706')
-                      : '#f3f4f6',
-                    color: reportMaasTipi === tab.value ? 'white' : '#374151',
-                    border: `1px solid ${reportMaasTipi === tab.value
-                      ? (tab.value === 'gunluk' ? '#4f46e5' : '#d97706')
-                      : '#d1d5db'}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '14px',
-                  }}
+                  key={rapor.kullanici_id}
+                  type="button"
+                  className="personel-collapsed-card personel-collapsed-card--name-only"
+                  onClick={() => setDetailRapor(rapor)}
                 >
-                  {tab.value === 'saatli' ? '⏱️' : '📅'} {tab.label}
-                  <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.9 }}>
-                    ({maasRaporu.filter((r) => r.maas_tipi === tab.value).length})
-                  </span>
+                  <div className="personel-collapsed-card-name">
+                    {getDisplayName(rapor.isim, rapor.soyisim)}
+                  </div>
                 </button>
               ))}
             </div>
-          </div>
-
-          {/* Ay/Yıl Seçimi */}
-          <div className="responsive-flex" style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <label>
-              Ay:
-              <select 
-                value={selectedMonth} 
-                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                style={{ marginLeft: '5px', padding: '5px' }}
-              >
-                {months.map(month => (
-                  <option key={month.value} value={month.value}>
-                    {month.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            
-            <label>
-              Yıl:
-              <select 
-                value={selectedYear} 
-                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                style={{ marginLeft: '5px', padding: '5px' }}
-              >
-                {years.map(year => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </label>
-            
-            <button 
-              onClick={fetchMaasRaporu}
-              style={{ padding: '5px 10px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}
-            >
-              Yenile
-            </button>
-            
-            <button 
-              onClick={handlePrint}
-              style={{ padding: '5px 10px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px' }}
-            >
-              🖨️ Yazdır
-            </button>
-          </div>
-
-          {/* Maaş Raporu Tablosu */}
-          <div>
-            <h3>
-              {isReportGunluk ? 'Gün Bazlı Maaş Raporu' : 'Saatlik Maaş Raporu'}
-              {' - '}{months.find(m => m.value === selectedMonth)?.label} {selectedYear}
-            </h3>
-            {loading ? (
-              <p>Yükleniyor...</p>
-            ) : (
-              <div className="mobile-scroll-wrap" style={{ overflowX: 'auto' }}>
-                <table
-                  id={`maas-raporu-tablosu-${reportMaasTipi}`}
-                  className="mobile-scroll-table"
-                  style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ddd' }}
-                >
-                  <thead>
-                    <tr style={{ backgroundColor: isReportGunluk ? '#eef2ff' : '#fffbeb' }}>
-                      <th style={{ border: '1px solid #ddd', padding: '8px' }}>Kullanıcı ID</th>
-                      <th style={{ border: '1px solid #ddd', padding: '8px' }}>Ad Soyad</th>
-                      <th style={{ border: '1px solid #ddd', padding: '8px' }}>Aylık Maaş</th>
-                      <th style={{ border: '1px solid #ddd', padding: '8px' }}>
-                        {isReportGunluk ? 'Hedef Gün' : 'Hedef Saat'}
-                      </th>
-                      <th style={{ border: '1px solid #ddd', padding: '8px' }}>
-                        {isReportGunluk ? 'Çalışılan Gün' : 'Çalışılan Saat'}
-                      </th>
-                      <th style={{ border: '1px solid #ddd', padding: '8px' }}>
-                        {isReportGunluk ? 'Günlük Ücret' : 'Saatlik Ücret'}
-                      </th>
-                      <th style={{ border: '1px solid #ddd', padding: '8px' }}>Hesaplanan Maaş</th>
-                      <th style={{ border: '1px solid #ddd', padding: '8px' }}>Fark</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredMaasRaporu.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} style={{ border: '1px solid #ddd', padding: '16px', textAlign: 'center', color: '#6b7280' }}>
-                          Bu kategoride rapor verisi bulunmuyor.
-                        </td>
-                      </tr>
-                    ) : filteredMaasRaporu.map((rapor) => (
-                      <tr key={rapor.kullanici_id}>
-                        <td style={{ border: '1px solid #ddd', padding: '8px' }}>{rapor.kullanici_id}</td>
-                        <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                          {rapor.isim} {rapor.soyisim}
-                        </td>
-                        <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                          {formatCurrency(rapor.aylik_maas)}
-                        </td>
-                        <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                          {formatHedef(rapor)}
-                        </td>
-                        <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                          {formatCalisilan(rapor)}
-                        </td>
-                        <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                          {formatCurrency(rapor.birim_ucret)}
-                        </td>
-                        <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                          {formatCurrency(rapor.hesaplanan_maas)}
-                        </td>
-                        <td style={{ 
-                          border: '1px solid #ddd', 
-                          padding: '8px',
-                          color: rapor.fark >= 0 ? '#28a745' : '#dc3545',
-                          fontWeight: 'bold'
-                        }}>
-                          {rapor.fark >= 0 ? '+' : ''}{formatCurrency(rapor.fark)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       )}
 
-      {/* Maaş Ayarları Sekmesi */}
       {activeSubTab === 'ayarlar' && (
         <div>
-          {/* Merkezi hedef ayarları */}
-          <div style={{
-            marginBottom: '24px',
-            padding: '20px',
-            border: '2px solid #3b82f6',
-            borderRadius: '8px',
-            backgroundColor: '#eff6ff',
-          }}>
-            <h3 style={{ margin: '0 0 8px 0', color: '#1e40af' }}>Genel Hedef Ayarları</h3>
-            <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#374151' }}>
-              Tüm saatlik personel için hedef saat ve tüm günlük personel için hedef gün buradan tek seferde güncellenir.
-            </p>
-            <div className="responsive-flex" style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
-                  Hedef Saat (Saatlik)
-                </label>
+          <div className="maas-hedef-card">
+            <h3 className="maas-hedef-title">Genel Hedef Ayarları</h3>
+            <div className="maas-hedef-grid">
+              <div className="maas-toolbar-field">
+                <label htmlFor="hedef-saatli">Hedef Saat (Saatlik)</label>
                 <input
+                  id="hedef-saatli"
                   type="number"
                   value={hedefInputs.saatli}
                   onChange={(e) => setHedefInputs((prev) => ({ ...prev, saatli: e.target.value }))}
-                  style={{ padding: '8px 12px', width: '120px', border: '1px solid #93c5fd', borderRadius: '6px' }}
+                  className="maas-dialog-input"
                 />
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
-                  Hedef Gün (Günlük)
-                </label>
+              <div className="maas-toolbar-field">
+                <label htmlFor="hedef-gunluk">Hedef Gün (Günlük)</label>
                 <input
+                  id="hedef-gunluk"
                   type="number"
                   value={hedefInputs.gunluk}
                   onChange={(e) => setHedefInputs((prev) => ({ ...prev, gunluk: e.target.value }))}
-                  style={{ padding: '8px 12px', width: '120px', border: '1px solid #93c5fd', borderRadius: '6px' }}
+                  className="maas-dialog-input"
                 />
               </div>
               <button
+                type="button"
+                className="maas-btn maas-btn--primary"
                 onClick={handleSaveHedefAyarlari}
                 disabled={hedefSaving}
-                style={{
-                  padding: '8px 20px',
-                  backgroundColor: '#2563eb',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: hedefSaving ? 'not-allowed' : 'pointer',
-                  fontWeight: '600',
-                }}
               >
                 {hedefSaving ? 'Kaydediliyor...' : 'Hedefleri Kaydet'}
               </button>
             </div>
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <div className="responsive-flex" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              {MAAS_TIPI_TABS.map((tab) => (
+          {renderMaasTypeTabs(settingsMaasTipi, (tip) => {
+            setSettingsMaasTipi(tip);
+            setShowAddForm(false);
+            setEditingSalary(null);
+            setSelectedPersonel('');
+            setAddSalary('');
+            setDetailAyar(null);
+          }, (tip) => maasAyarlari.filter((a) => getPersonelMaasTipi(a.personel) === tip).length)}
+
+          <div className="maas-section-header">
+            <h3 className="maas-section-title" style={{ margin: 0 }}>
+              {isGunluk ? 'Gün Bazlı Maaş Ayarları' : 'Saatlik Maaş Ayarları'}
+            </h3>
+            <button
+              type="button"
+              className="maas-btn maas-btn--success"
+              onClick={() => setShowAddForm(true)}
+            >
+              + Yeni Maaş Ayarı Ekle
+            </button>
+          </div>
+
+          {showAddForm && (
+            <div className="personel-add-card">
+              <h4 className="personel-add-title">
+                Yeni {isGunluk ? 'Gün Bazlı' : 'Saatlik'} Maaş Ayarı Ekle
+              </h4>
+              <div className="personel-form-grid personel-form-grid--add">
+                <div className="personel-form-field personel-form-field--span-full-mobile">
+                  <label htmlFor="maas-add-personel">Personel</label>
+                  <select
+                    id="maas-add-personel"
+                    value={selectedPersonel}
+                    onChange={(e) => setSelectedPersonel(e.target.value)}
+                  >
+                    <option value="">Personel Seçin</option>
+                    {filteredAvailablePersonel.map((personel) => (
+                      <option key={personel.kullanici_id} value={personel.kullanici_id}>
+                        {personel.kullanici_id} - {getDisplayName(personel.isim, personel.soyisim)}
+                      </option>
+                    ))}
+                    {filteredAvailablePersonel.length === 0 && (
+                      <option value="" disabled>Bu kategoride eklenecek personel yok</option>
+                    )}
+                  </select>
+                </div>
+                <div className="personel-form-field">
+                  <label htmlFor="maas-add-salary">Aylık Maaş</label>
+                  <input
+                    id="maas-add-salary"
+                    type="number"
+                    value={addSalary}
+                    onChange={(e) => setAddSalary(e.target.value)}
+                    placeholder="40000"
+                  />
+                </div>
+              </div>
+              <div className="personel-add-footer">
+                <div />
+                <div className="personel-form-actions" style={{ flexDirection: 'row', width: 'auto' }}>
+                  <button type="button" className="btn-primary" onClick={addNewSalary}>Ekle</button>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      setShowAddForm(false);
+                      setSelectedPersonel('');
+                      setAddSalary('');
+                    }}
+                  >
+                    İptal
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {filteredMaasAyarlari.length === 0 ? (
+            <div className="personel-empty">Bu kategoride aktif personel bulunmuyor.</div>
+          ) : (
+            <div className="personel-mobile-list">
+              {filteredMaasAyarlari.map((ayar) => (
                 <button
-                  key={tab.value}
+                  key={ayar.kullanici_id}
+                  type="button"
+                  className="personel-collapsed-card personel-collapsed-card--name-only"
                   onClick={() => {
-                    setSettingsMaasTipi(tab.value);
-                    setShowAddForm(false);
+                    setDetailAyar(ayar);
                     setEditingSalary(null);
-                    setSelectedPersonel('');
-                    setAddSalary('');
-                  }}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: settingsMaasTipi === tab.value
-                      ? (tab.value === 'gunluk' ? '#4f46e5' : '#d97706')
-                      : '#f3f4f6',
-                    color: settingsMaasTipi === tab.value ? 'white' : '#374151',
-                    border: `1px solid ${settingsMaasTipi === tab.value
-                      ? (tab.value === 'gunluk' ? '#4f46e5' : '#d97706')
-                      : '#d1d5db'}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '14px',
+                    setNewSalary('');
                   }}
                 >
-                  {tab.value === 'saatli' ? '⏱️' : '📅'} {tab.label}
-                  <span style={{
-                    marginLeft: '8px',
-                    fontSize: '12px',
-                    opacity: 0.9,
-                  }}>
-                    ({maasAyarlari.filter((a) => getPersonelMaasTipi(a.personel) === tab.value).length})
-                  </span>
+                  <div className="personel-collapsed-card-name">
+                    {getDisplayName(ayar.personel?.isim, ayar.personel?.soyisim)}
+                  </div>
                 </button>
               ))}
             </div>
-          </div>
-
-          <div style={{ marginBottom: '30px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '12px' }}>
-              <h3 style={{ margin: 0 }}>
-                {isGunluk ? 'Gün Bazlı Maaş Ayarları' : 'Saatlik Maaş Ayarları'}
-              </h3>
-              <button 
-                onClick={() => setShowAddForm(true)}
-                style={{ 
-                  padding: '8px 16px', 
-                  backgroundColor: '#28a745', 
-                  color: 'white', 
-                  border: 'none', 
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                + Yeni Maaş Ayarı Ekle
-              </button>
-            </div>
-
-            {/* Yeni Maaş Ayarı Ekleme Formu */}
-            {showAddForm && (
-              <div style={{ 
-                border: '1px solid #ddd', 
-                padding: '15px', 
-                marginBottom: '15px', 
-                borderRadius: '4px',
-                backgroundColor: '#f9f9f9'
-              }}>
-                <h4>
-                  Yeni {isGunluk ? 'Gün Bazlı' : 'Saatlik'} Maaş Ayarı Ekle
-                </h4>
-                <div className="responsive-flex" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div>
-                    <label>Personel:</label>
-                    <select
-                      value={selectedPersonel}
-                      onChange={(e) => setSelectedPersonel(e.target.value)}
-                      style={{ marginLeft: '5px', padding: '5px', minWidth: '200px' }}
-                    >
-                      <option value="">Personel Seçin</option>
-                      {filteredAvailablePersonel.map(personel => (
-                        <option key={personel.kullanici_id} value={personel.kullanici_id}>
-                          {personel.kullanici_id} - {personel.isim} {personel.soyisim}
-                        </option>
-                      ))}
-                      {filteredAvailablePersonel.length === 0 && (
-                        <option value="" disabled>
-                          Bu kategoride eklenecek personel yok
-                        </option>
-                      )}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label>Aylık Maaş:</label>
-                    <input
-                      type="number"
-                      value={addSalary}
-                      onChange={(e) => setAddSalary(e.target.value)}
-                      placeholder="40000"
-                      style={{ marginLeft: '5px', padding: '5px', width: '120px' }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '5px' }}>
-                    <button
-                      onClick={addNewSalary}
-                      style={{ 
-                        padding: '5px 10px', 
-                        backgroundColor: '#007bff', 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '3px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Ekle
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowAddForm(false);
-                        setSelectedPersonel('');
-                        setAddSalary('');
-                      }}
-                      style={{ 
-                        padding: '5px 10px', 
-                        backgroundColor: '#6c757d', 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '3px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      İptal
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Maaş Ayarları Tablosu */}
-            <div className="mobile-scroll-wrap" style={{ overflowX: 'auto' }}>
-              <table className="mobile-scroll-table" style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ddd' }}>
-                <thead>
-                  <tr style={{ backgroundColor: isGunluk ? '#eef2ff' : '#fffbeb' }}>
-                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Kullanıcı ID</th>
-                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Ad Soyad</th>
-                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Aylık Maaş</th>
-                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>
-                      {isGunluk ? 'Günlük Ücret' : 'Saatlik Ücret'}
-                    </th>
-                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>İşlemler</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMaasAyarlari.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} style={{ border: '1px solid #ddd', padding: '16px', textAlign: 'center', color: '#6b7280' }}>
-                        Bu kategoride aktif personel bulunmuyor.
-                      </td>
-                    </tr>
-                  ) : filteredMaasAyarlari.map((ayar) => {
-                    const tip = getPersonelMaasTipi(ayar.personel);
-                    const birimUcret = calcBirimUcret(ayar.aylik_maas, tip, hedefAyarlari);
-                    return (
-                    <tr key={ayar.kullanici_id}>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{ayar.kullanici_id}</td>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                        {ayar.personel?.isim} {ayar.personel?.soyisim}
-                      </td>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                        {editingSalary === ayar.kullanici_id ? (
-                          <input
-                            type="number"
-                            value={newSalary}
-                            onChange={(e) => setNewSalary(e.target.value)}
-                            placeholder="Aylık maaş"
-                            style={{ width: '100px', padding: '4px' }}
-                          />
-                        ) : (
-                          formatCurrency(ayar.aylik_maas)
-                        )}
-                      </td>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                        {formatCurrency(birimUcret)}
-                        <div style={{ fontSize: '11px', color: '#6b7280' }}>
-                          (Hedef: {getHedefDeger(tip, hedefAyarlari)} {isGunluk ? 'gün' : 'saat'})
-                        </div>
-                      </td>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                        {editingSalary === ayar.kullanici_id ? (
-                          <div style={{ display: 'flex', gap: '5px' }}>
-                            <button
-                              onClick={() => updateSalary(ayar.kullanici_id)}
-                              style={{ 
-                                padding: '4px 8px', 
-                                backgroundColor: '#28a745', 
-                                color: 'white', 
-                                border: 'none', 
-                                borderRadius: '3px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Kaydet
-                            </button>
-                            <button
-                              onClick={() => {
-                                setEditingSalary(null);
-                                setNewSalary('');
-                              }}
-                              style={{ 
-                                padding: '4px 8px', 
-                                backgroundColor: '#6c757d', 
-                                color: 'white', 
-                                border: 'none', 
-                                borderRadius: '3px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              İptal
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              setEditingSalary(ayar.kullanici_id);
-                              setNewSalary(ayar.aylik_maas.toString());
-                            }}
-                            style={{ 
-                              padding: '4px 8px', 
-                              backgroundColor: '#007bff', 
-                              color: 'white', 
-                              border: 'none', 
-                              borderRadius: '3px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Düzenle
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          )}
         </div>
       )}
+
+      <Modal
+        open={!!detailRapor}
+        onClose={() => setDetailRapor(null)}
+        title={detailRapor ? getDisplayName(detailRapor.isim, detailRapor.soyisim) : 'Maaş Raporu Detayı'}
+      >
+        {detailRapor && renderRaporDetail(detailRapor)}
+      </Modal>
+
+      <Modal
+        open={!!detailAyar}
+        onClose={() => {
+          setDetailAyar(null);
+          setEditingSalary(null);
+          setNewSalary('');
+        }}
+        title={detailAyar ? getDisplayName(detailAyar.personel?.isim, detailAyar.personel?.soyisim) : 'Maaş Ayarı'}
+      >
+        {detailAyar && renderAyarDetail(detailAyar)}
+      </Modal>
     </div>
   );
 };

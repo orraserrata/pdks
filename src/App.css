@@ -987,10 +987,55 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 14px 0;
+  margin: 0;
   font-size: 14px;
   color: #374151;
   cursor: pointer;
+}
+
+.personel-add-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.personel-form-field--span-full-mobile {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 769px) {
+  .personel-add-card {
+    padding: 20px 24px;
+    margin-bottom: 24px;
+  }
+
+  .personel-form-grid--add {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .personel-form-field--span-full-mobile {
+    grid-column: auto;
+  }
+
+  .personel-add-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 4px;
+    border-top: 1px solid #f3f4f6;
+  }
+
+  .personel-add-submit {
+    width: auto;
+    min-width: 180px;
+    padding: 11px 24px;
+  }
+
+  .personel-add-submit:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
 }
 
 .personel-form-checkbox input {
@@ -1009,6 +1054,7 @@
   cursor: pointer;
   background: #2563eb;
   color: #fff;
+  transition: background-color 0.15s;
 }
 
 .personel-add-submit:disabled {
@@ -1345,4 +1391,194 @@ table .btn-toggle-status {
 
 .personel-delete-btn {
   margin-top: 4px;
+}
+
+/* Maaş Hesabı */
+.maas-sub-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 20px;
+}
+
+.maas-sub-tab {
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.maas-sub-tab--active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+.maas-type-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.maas-type-tab {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.maas-type-tab-count {
+  margin-left: 6px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.maas-type-tab--active.maas-type-tab--saatli {
+  background: #d97706;
+  border-color: #d97706;
+  color: #fff;
+}
+
+.maas-type-tab--active.maas-type-tab--gunluk {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #fff;
+}
+
+.maas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 20px;
+}
+
+.maas-toolbar-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.maas-toolbar-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.maas-toolbar-field select,
+.maas-dialog-input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.maas-toolbar-field select {
+  min-width: 120px;
+}
+
+.maas-dialog-input {
+  max-width: 100%;
+}
+
+.maas-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, background-color 0.15s;
+  white-space: nowrap;
+}
+
+.maas-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.maas-btn--primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.maas-btn--primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.maas-btn--success {
+  background: #10b981;
+  color: #fff;
+}
+
+.maas-btn--success:hover:not(:disabled) {
+  background: #059669;
+}
+
+.maas-hedef-card {
+  margin-bottom: 24px;
+  padding: 20px;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  background: #eff6ff;
+}
+
+.maas-hedef-title {
+  margin: 0 0 16px;
+  color: #1e40af;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.maas-hedef-grid {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.maas-hedef-grid .maas-toolbar-field {
+  min-width: 140px;
+}
+
+.maas-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.maas-section-title {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.maas-fark-positive {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.maas-fark-negative {
+  color: #dc2626;
+  font-weight: 700;
 }

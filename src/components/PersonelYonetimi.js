@@ -442,6 +442,67 @@ export default function PersonelYonetimi({ onChanged }) {
     </form>
   );
 
+  const renderAddPersonelForm = () => (
+    <form onSubmit={handleSubmit} className="personel-add-card">
+      <h3 className="personel-add-title">Yeni Personel Ekle</h3>
+      <div className="personel-form-grid personel-form-grid--add">
+        <div className="personel-form-field personel-form-field--span-full-mobile">
+          <label htmlFor="add-kullanici-id">Kullanıcı ID</label>
+          <input
+            id="add-kullanici-id"
+            type="number"
+            name="kullanici_id"
+            value={form.kullanici_id}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="personel-form-field">
+          <label htmlFor="add-isim">İsim</label>
+          <input id="add-isim" type="text" name="isim" value={form.isim} onChange={handleChange} required />
+        </div>
+        <div className="personel-form-field">
+          <label htmlFor="add-soyisim">Soyisim</label>
+          <input id="add-soyisim" type="text" name="soyisim" value={form.soyisim} onChange={handleChange} required />
+        </div>
+        <div className="personel-form-field personel-form-field--span-full-mobile">
+          <label htmlFor="add-ise-giris">İşe Giriş Tarihi</label>
+          <input id="add-ise-giris" type="date" name="ise_giris_tarihi" value={form.ise_giris_tarihi} onChange={handleChange} required />
+        </div>
+        <div className="personel-form-field">
+          <label htmlFor="add-maas-tipi">Maaş Tipi</label>
+          <select id="add-maas-tipi" name="maas_tipi" value={form.maas_tipi} onChange={handleChange}>
+            {MAAS_TIPI_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="personel-form-field">
+          <label htmlFor="add-calisma-tipi">Çalışma Tipi</label>
+          <select id="add-calisma-tipi" name="calisma_tipi" value={form.calisma_tipi} onChange={handleChange}>
+            {CALISMA_TIPI_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="personel-add-footer">
+        <label className="personel-form-checkbox">
+          <input
+            type="checkbox"
+            name="aktif"
+            checked={form.aktif}
+            onChange={(e) => setForm((prev) => ({ ...prev, aktif: e.target.checked }))}
+          />
+          Aktif personel
+        </label>
+        <button type="submit" className="btn-primary personel-add-submit" disabled={loading || !isValid}>
+          {loading ? "Ekleniyor..." : "Personel Ekle"}
+        </button>
+      </div>
+    </form>
+  );
+
   return (
     <div style={{ marginBottom: 20 }}>
       <h2>Personel Yönetimi</h2>
@@ -449,152 +510,7 @@ export default function PersonelYonetimi({ onChanged }) {
       {session ? (
         <>
                      {/* Personel Ekleme Formu - Sadece Admin */}
-           {userProfile && userProfile.is_admin && (
-            isMobileViewport ? (
-              <form onSubmit={handleSubmit} className="personel-add-card">
-                <h3 className="personel-add-title">Yeni Personel Ekle</h3>
-                <div className="personel-form-grid">
-                  <div className="personel-form-field personel-form-field--full">
-                    <label htmlFor="add-kullanici-id">Kullanıcı ID</label>
-                    <input
-                      id="add-kullanici-id"
-                      type="number"
-                      name="kullanici_id"
-                      value={form.kullanici_id}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                  <div className="personel-form-field">
-                    <label htmlFor="add-isim">İsim</label>
-                    <input id="add-isim" type="text" name="isim" value={form.isim} onChange={handleChange} required />
-                  </div>
-                  <div className="personel-form-field">
-                    <label htmlFor="add-soyisim">Soyisim</label>
-                    <input id="add-soyisim" type="text" name="soyisim" value={form.soyisim} onChange={handleChange} required />
-                  </div>
-                  <div className="personel-form-field personel-form-field--full">
-                    <label htmlFor="add-ise-giris">İşe Giriş Tarihi</label>
-                    <input id="add-ise-giris" type="date" name="ise_giris_tarihi" value={form.ise_giris_tarihi} onChange={handleChange} required />
-                  </div>
-                  <div className="personel-form-field">
-                    <label htmlFor="add-maas-tipi">Maaş Tipi</label>
-                    <select id="add-maas-tipi" name="maas_tipi" value={form.maas_tipi} onChange={handleChange}>
-                      {MAAS_TIPI_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="personel-form-field">
-                    <label htmlFor="add-calisma-tipi">Çalışma Tipi</label>
-                    <select id="add-calisma-tipi" name="calisma_tipi" value={form.calisma_tipi} onChange={handleChange}>
-                      {CALISMA_TIPI_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <label className="personel-form-checkbox">
-                  <input
-                    type="checkbox"
-                    name="aktif"
-                    checked={form.aktif}
-                    onChange={(e) => setForm((prev) => ({ ...prev, aktif: e.target.checked }))}
-                  />
-                  Aktif personel
-                </label>
-                <button type="submit" className="btn-primary personel-add-submit" disabled={loading || !isValid}>
-                  {loading ? "Ekleniyor..." : "Personel Ekle"}
-                </button>
-              </form>
-            ) : (
-            <form onSubmit={handleSubmit} className="responsive-flex" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
-            <label>
-              Kullanıcı ID
-              <input
-                type="number"
-                name="kullanici_id"
-                value={form.kullanici_id}
-                onChange={handleChange}
-                required
-                style={{ marginLeft: 6 }}
-              />
-            </label>
-            <label>
-              İsim
-              <input
-                type="text"
-                name="isim"
-                value={form.isim}
-                onChange={handleChange}
-                required
-                style={{ marginLeft: 6 }}
-              />
-            </label>
-            <label>
-              Soyisim
-              <input
-                type="text"
-                name="soyisim"
-                value={form.soyisim}
-                onChange={handleChange}
-                required
-                style={{ marginLeft: 6 }}
-              />
-            </label>
-            <label>
-              İşe Giriş Tarihi
-              <input
-                type="date"
-                name="ise_giris_tarihi"
-                value={form.ise_giris_tarihi}
-                onChange={handleChange}
-                required
-                style={{ marginLeft: 6 }}
-              />
-            </label>
-            <label>
-              Maaş Tipi
-              <select
-                name="maas_tipi"
-                value={form.maas_tipi}
-                onChange={handleChange}
-                style={{ marginLeft: 6, padding: "4px 8px" }}
-              >
-                {MAAS_TIPI_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Çalışma Tipi
-              <select
-                name="calisma_tipi"
-                value={form.calisma_tipi}
-                onChange={handleChange}
-                style={{ marginLeft: 6, padding: "4px 8px" }}
-              >
-                {CALISMA_TIPI_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                name="aktif"
-                checked={form.aktif}
-                onChange={(e) => setForm(prev => ({ ...prev, aktif: e.target.checked }))}
-                style={{ marginRight: 6 }}
-              />
-              Aktif
-            </label>
-            <button type="submit" disabled={loading || !isValid}>
-              {loading ? "Ekleniyor..." : "Ekle"}
-            </button>
-          </form>
-            )
-          )}
+           {userProfile && userProfile.is_admin && renderAddPersonelForm()}
 
           {error && <div className="personel-error">{error}</div>}
 
