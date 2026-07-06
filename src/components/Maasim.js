@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { fetchMaasHedefleri, calcBirimUcret, DEFAULT_HEDEFLER } from '../utils/maasHedefleri';
+import LoadingSpinner from './LoadingSpinner';
 
 const Maasim = ({ session, userProfile }) => {
   const [maasBilgileri, setMaasBilgileri] = useState(null);
@@ -170,7 +171,7 @@ const Maasim = ({ session, userProfile }) => {
   }
 
   if (loading) {
-    return <div>Maaş bilgileri yükleniyor...</div>;
+    return <LoadingSpinner className="loader-wrap--page" />;
   }
 
   if (error) {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { format } from "date-fns";
 import { tr as trLocale } from "date-fns/locale";
+import LoadingSpinner from "./LoadingSpinner";
 
 export default function HataBildirimleriListesi() {
   const [bildirimler, setBildirimler] = useState([]);
@@ -395,7 +396,7 @@ export default function HataBildirimleriListesi() {
     );
   }
 
-  if (loading) return <div>Yükleniyor...</div>;
+  if (loading) return <LoadingSpinner className="loader-wrap--page" />;
   if (error) return <div style={{ color: "red" }}>{error}</div>;
 
   // Giriş yapılmamışsa uyarı göster

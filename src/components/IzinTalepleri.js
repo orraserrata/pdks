@@ -10,6 +10,7 @@ import {
   YILLIK_IZIN_GUN,
   PART_TIME_IZIN_ESIK_GUN,
 } from "../utils/yillikIzin";
+import LoadingSpinner from "./LoadingSpinner";
 
 function parseLocalDate(dateStr) {
   if (!dateStr) return null;
@@ -1155,7 +1156,7 @@ export default function IzinTalepleri() {
 
           {/* Talepler Tablosu */}
           {loading ? (
-            <div>Yükleniyor...</div>
+            <LoadingSpinner />
           ) : error ? (
             <div style={{ color: "red" }}>{error}</div>
           ) : talepler.length === 0 ? (
@@ -1445,7 +1446,7 @@ export default function IzinTalepleri() {
           </div>
 
           {summaryLoading ? (
-            <div>Yükleniyor...</div>
+            <LoadingSpinner />
           ) : (
             <>
               {filteredSummaryRows.length === 0 ? (

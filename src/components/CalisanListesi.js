@@ -1,6 +1,7 @@
 // components/CalisanListesi.js
 import React, { useState, useMemo, useEffect } from "react";
 import { supabase } from "../supabaseClient";
+import LoadingSpinner from "./LoadingSpinner";
 
 export default function CalisanListesi({ personeller, onCalisanSelect, session }) {
   const [filter, setFilter] = useState("active"); // "all", "active", "inactive"
@@ -143,20 +144,7 @@ export default function CalisanListesi({ personeller, onCalisanSelect, session }
           </div>
         </div>
       ) : profileLoading ? (
-        <div style={{
-          padding: "12px",
-          backgroundColor: "#fef3c7",
-          border: "1px solid #f59e0b",
-          borderRadius: "6px",
-          marginBottom: "12px"
-        }}>
-          <div style={{ fontSize: "14px", color: "#92400e", fontWeight: "500", marginBottom: "4px" }}>
-            Profil Yükleniyor...
-          </div>
-          <div style={{ fontSize: "13px", color: "#92400e" }}>
-            Kullanıcı profiliniz yükleniyor, lütfen bekleyin.
-          </div>
-        </div>
+        <LoadingSpinner />
       ) : !userProfile ? (
         <div style={{
           padding: "12px",

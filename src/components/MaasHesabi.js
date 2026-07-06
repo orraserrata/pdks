@@ -8,6 +8,7 @@ import {
   getHedefDeger,
   DEFAULT_HEDEFLER,
 } from '../utils/maasHedefleri';
+import LoadingSpinner from './LoadingSpinner';
 
 const MAAS_TIPI_TABS = [
   { value: 'saatli', label: 'Saatlik Maaş Alanlar' },
@@ -614,7 +615,7 @@ const MaasHesabi = () => {
           </h3>
 
           {loading ? (
-            <p>Yükleniyor...</p>
+            <LoadingSpinner />
           ) : filteredMaasRaporu.length === 0 ? (
             <div className="personel-empty">Bu kategoride rapor verisi bulunmuyor.</div>
           ) : (

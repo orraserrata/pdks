@@ -1,6 +1,7 @@
 // src/components/PersonelGirisCikisListesi.js
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
+import LoadingSpinner from './LoadingSpinner';
 
 function PersonelGirisCikisListesi() {
   const [kayitlar, setKayitlar] = useState([]);
@@ -24,7 +25,7 @@ function PersonelGirisCikisListesi() {
     fetchData();
   }, []);
 
-  if (loading) return <div>Yükleniyor...</div>;
+  if (loading) return <LoadingSpinner className="loader-wrap--page" />;
 
   return (
     <div>

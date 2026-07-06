@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { format, addDays } from "date-fns";
 import { calcIzinGunInRange } from "../utils/yillikIzin";
+import LoadingSpinner from "./LoadingSpinner";
 
 function formatYillikIzinGun(gun) {
   return gun > 0 ? String(gun) : "-";
@@ -176,7 +177,7 @@ function TumCalisanlar() {
     printWindow.print();
   };
 
-  if (loading) return <div>Yükleniyor...</div>;
+  if (loading) return <LoadingSpinner className="loader-wrap--page" />;
 
   return (
     <div>

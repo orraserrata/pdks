@@ -12,6 +12,7 @@ import HesapOlustur from "./components/HesapOlustur";
 import GirisYap from "./components/GirisYap";
 import Modal from "./components/Modal";
 import ErrorBoundary from "./components/ErrorBoundary";
+import LoadingSpinner from "./components/LoadingSpinner";
 import MaasHesabi from "./components/MaasHesabi";
 import Maasim from "./components/Maasim";
 import IzinTalepleri from "./components/IzinTalepleri";
@@ -211,7 +212,7 @@ function App() {
     }
   }
 
-  if (loading) return <div className="container">Yükleniyor...</div>;
+  if (loading) return <div className="container"><LoadingSpinner className="loader-wrap--page" /></div>;
 
   return (
     <ErrorBoundary>
