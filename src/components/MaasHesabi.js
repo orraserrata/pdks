@@ -139,12 +139,12 @@ const MaasHesabi = () => {
         }
 
         if (maasTipi === 'gunluk') {
+          // Tüm Çalışanlar raporu ile aynı mantık: giriş/çıkış eksik olsa da
+          // o iş gününde kayıt varsa tam gün sayılır
           const gunler = new Set();
           calismaData?.forEach((record) => {
-            if (record.cikis_tarihi) {
-              const day = record.workday_date || record.giris_tarihi?.split('T')[0];
-              if (day) gunler.add(day);
-            }
+            const day = record.workday_date || record.giris_tarihi?.split('T')[0];
+            if (day) gunler.add(day);
           });
 
           const calisilanGun = gunler.size;
