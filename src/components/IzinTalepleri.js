@@ -10,9 +10,18 @@ import {
   PART_TIME_IZIN_ESIK_GUN,
 } from "../utils/yillikIzin";
 
+function parseLocalDate(dateStr) {
+  if (!dateStr) return null;
+  const [y, m, d] = String(dateStr).split("T")[0].split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
+}
+
 function calcIzinGunSayisi(baslangic, bitis) {
-  if (!baslangic || !bitis) return 0;
-  const days = differenceInCalendarDays(new Date(bitis), new Date(baslangic)) + 1;
+  const start = parseLocalDate(baslangic);
+  const end = parseLocalDate(bitis);
+  if (!start || !end) return 0;
+  const days = differenceInCalendarDays(end, start) + 1;
   return days > 0 ? days : 0;
 }
 
@@ -448,8 +457,9 @@ export default function IzinTalepleri() {
   function calculateDaysInMonth(baslangic, bitis, year, month) {
     const monthStart = new Date(year, month - 1, 1);
     const monthEnd = new Date(year, month, 0);
-    const izinStart = new Date(baslangic);
-    const izinEnd = new Date(bitis);
+    const izinStart = parseLocalDate(baslangic);
+    const izinEnd = parseLocalDate(bitis);
+    if (!izinStart || !izinEnd) return 0;
 
     const effectiveStart = izinStart > monthStart ? izinStart : monthStart;
     const effectiveEnd = izinEnd < monthEnd ? izinEnd : monthEnd;
@@ -1077,10 +1087,10 @@ export default function IzinTalepleri() {
                           </span>
                         </td>
                         <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151" }}>
-                          {format(new Date(talep.baslangic_tarihi), "dd MMM yyyy", { locale: trLocale })}
+                          {format(parseLocalDate(talep.baslangic_tarihi), "dd MMM yyyy", { locale: trLocale })}
                         </td>
                         <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151" }}>
-                          {format(new Date(talep.bitis_tarihi), "dd MMM yyyy", { locale: trLocale })}
+                          {format(parseLocalDate(talep.bitis_tarihi), "dd MMM yyyy", { locale: trLocale })}
                         </td>
                         <td style={{ padding: "16px 12px", fontSize: "14px", color: "#374151", fontWeight: "600" }}>
                           {gunSayisi > 0 ? gunSayisi : "-"}
