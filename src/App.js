@@ -35,6 +35,16 @@ function App() {
   const [passwordResetError, setPasswordResetError] = useState('');
   const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const onChange = (e) => setIsMobileViewport(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   async function fetchPersoneller() {
     const { data, error } = await supabase
@@ -432,17 +442,24 @@ function App() {
             <Maasim session={session} userProfile={userProfile} />
           </div>
         ) : (
-          <div className="card">
-            <CalisanListesi
-              personeller={personeller}
-              onCalisanSelect={(calisan) => setSeciliCalisan(calisan)}
-              session={session}
-            />
+          <div className={isMobileViewport ? undefined : "layout"}>
+            <div className="card">
+              <CalisanListesi
+                personeller={personeller}
+                onCalisanSelect={(calisan) => setSeciliCalisan(calisan)}
+                session={session}
+              />
+            </div>
+            {!isMobileViewport && seciliCalisan && (
+              <div className="card">
+                <CalisanDetay calisan={seciliCalisan} />
+              </div>
+            )}
           </div>
         )}
 
         <Modal
-          open={!!seciliCalisan}
+          open={isMobileViewport && !!seciliCalisan}
           onClose={() => setSeciliCalisan(null)}
           wide
           title={
