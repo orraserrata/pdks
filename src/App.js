@@ -308,7 +308,7 @@ function App() {
       <div className="App container">
         <div className="toolbar">
           <div className="toolbar-left">
-            <img src="/logo.svg" alt="PDKS" className="app-logo" />
+            <img src="/logo.svg" alt="Lulus Personel" className="app-logo" />
           </div>
           <div className="toolbar-center">
             <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
@@ -373,30 +373,36 @@ function App() {
             </div>
           </div>
           <div className="toolbar-right">
-            <div className="account">
+            <div className={`account${session ? " account--logged-in" : ""}`}>
               {session ? (
                 <>
-                  <span>Hesap: {session.user?.email}</span>
-                  <button className="tab" onClick={async () => {
-                    console.log("Çıkış butonuna tıklandı");
-                    
-                    try {
-                      await supabase.auth.signOut();
-                      console.log("Çıkış başarılı");
-                      
-                      // State'leri temizle
-                      setSession(null);
-                      setUserProfile(null);
-                      
-                      // Storage'ları temizle
-                      localStorage.clear();
-                      sessionStorage.clear();
-                      
-                      console.log("Tüm veriler temizlendi");
-                    } catch (error) {
-                      console.error("Çıkış hatası:", error);
-                    }
-                  }}>Çıkış</button>
+                  <div
+                    className="account-profile"
+                    title={session.user?.email || ""}
+                    aria-label={session.user?.email || "Profil"}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <circle cx="12" cy="8" r="4" />
+                      <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" />
+                    </svg>
+                  </div>
+                  <button
+                    type="button"
+                    className="account-logout-btn"
+                    onClick={async () => {
+                      try {
+                        await supabase.auth.signOut();
+                        setSession(null);
+                        setUserProfile(null);
+                        localStorage.clear();
+                        sessionStorage.clear();
+                      } catch (error) {
+                        console.error("Çıkış hatası:", error);
+                      }
+                    }}
+                  >
+                    Çıkış
+                  </button>
                 </>
               ) : (
                 <>
