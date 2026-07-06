@@ -7,7 +7,7 @@ import {
   getCalismaTipiLabel,
   isPartTime,
   YILLIK_IZIN_GUN,
-  TAM_ZAMANLI_YILLIK_CALISMA_GUN,
+  PART_TIME_IZIN_ESIK_GUN,
 } from "../utils/yillikIzin";
 
 export default function IzinTalepleri() {
@@ -802,7 +802,7 @@ export default function IzinTalepleri() {
                 </div>
                 <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "2px" }}>
                   {isPartTime({ calisma_tipi: myLeaveSummary.calismaTipi })
-                    ? `Yarı zamanlı | Fiili çalışma günü: ${myLeaveSummary.totalDays} (${myLeaveSummary.totalDays}/${TAM_ZAMANLI_YILLIK_CALISMA_GUN} × ${YILLIK_IZIN_GUN})`
+                    ? `Yarı zamanlı | Fiili çalışma: ${myLeaveSummary.totalDays} gün | Her ${PART_TIME_IZIN_ESIK_GUN} günde ${YILLIK_IZIN_GUN} gün izin (tamamlanmayan günler sayılmaz)`
                     : `Tam zamanlı | Fiili çalışma günü: ${myLeaveSummary.totalDays} | Kıdem: ${myLeaveSummary.yearsEmployed} Yıl`}
                 </div>
               </div>
@@ -1240,7 +1240,7 @@ export default function IzinTalepleri() {
                         padding: "10px 8px", textAlign: "center", fontWeight: "700",
                         backgroundColor: "#e0e7ff", color: "#3730a3",
                         border: "1px solid #c7d2fe", whiteSpace: "nowrap",
-                      }} title={`Tam zamanlı: her tam yıl kıdem = ${YILLIK_IZIN_GUN} gün | Yarı zamanlı: çalışılan gün / ${TAM_ZAMANLI_YILLIK_CALISMA_GUN} × ${YILLIK_IZIN_GUN}`}>HAK EDİLEN</th>
+                      }} title={`Tam zamanlı: her tam yıl kıdem = ${YILLIK_IZIN_GUN} gün | Yarı zamanlı: her tam ${PART_TIME_IZIN_ESIK_GUN} çalışma günü = ${YILLIK_IZIN_GUN} gün izin`}>HAK EDİLEN</th>
                       <th style={{
                         padding: "10px 8px", textAlign: "center", fontWeight: "700",
                         backgroundColor: "#e0e7ff", color: "#3730a3",

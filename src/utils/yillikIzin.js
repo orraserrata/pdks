@@ -1,7 +1,7 @@
 import { differenceInCalendarDays } from "date-fns";
 
 export const YILLIK_IZIN_GUN = 14;
-export const TAM_ZAMANLI_YILLIK_CALISMA_GUN = 260;
+export const PART_TIME_IZIN_ESIK_GUN = 300;
 
 export const CALISMA_TIPI_OPTIONS = [
   { value: "full_time", label: "Tam Zamanlı" },
@@ -35,8 +35,7 @@ export function calcOtomatikHakedilenIzin({
 }) {
   if (isPartTime({ calisma_tipi })) {
     const days = total_working_days || 0;
-    if (days <= 0) return 0;
-    return Math.round((days / TAM_ZAMANLI_YILLIK_CALISMA_GUN) * YILLIK_IZIN_GUN);
+    return Math.floor(days / PART_TIME_IZIN_ESIK_GUN) * YILLIK_IZIN_GUN;
   }
 
   return calcYearsEmployed(ise_giris_tarihi) * YILLIK_IZIN_GUN;
