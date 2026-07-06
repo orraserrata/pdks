@@ -27,7 +27,6 @@ export default function PersonelYonetimi({ onChanged }) {
   const [error, setError] = useState("");
   const [session, setSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
-  const [kullaniciProfilleri, setKullaniciProfilleri] = useState([]);
   const [personeller, setPersoneller] = useState([]);
   const [filter, setFilter] = useState("active");
   const [editingId, setEditingId] = useState(null);
@@ -125,26 +124,6 @@ export default function PersonelYonetimi({ onChanged }) {
 
     loadUserProfile();
   }, [session]);
-
-  // Kullanıcı profillerini yükle
-  useEffect(() => {
-    async function loadKullaniciProfilleri() {
-      try {
-        const { data, error } = await supabase
-          .from("kullanici_profilleri")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (!error && data) {
-          setKullaniciProfilleri(data);
-        }
-      } catch (err) {
-        console.warn("Kullanıcı profilleri yükleme hatası:", err);
-      }
-    }
-
-    loadKullaniciProfilleri();
-  }, []);
 
   // Personelleri yükle
   useEffect(() => {
@@ -272,43 +251,6 @@ export default function PersonelYonetimi({ onChanged }) {
       await reloadPersoneller();
 
       alert(`Personel ${action} yapıldı!`);
-    } catch (err) {
-      setError(String(err.message || err));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Admin yetkisi verme/kaldırma fonksiyonu
-  async function handleToggleAdmin(email, currentAdminStatus) {
-    const newAdminStatus = !currentAdminStatus;
-    const action = newAdminStatus ? "admin yetkisi vermek" : "admin yetkisini kaldırmak";
-    
-    if (!window.confirm(`Bu kullanıcıya ${action} istediğinize emin misiniz?`)) return;
-    
-    setLoading(true);
-    setError("");
-    try {
-      const { error: updateError } = await supabase
-        .from("kullanici_profilleri")
-        .update({ is_admin: newAdminStatus })
-        .eq("email", email);
-
-      if (updateError) {
-        setError(updateError.message || "Admin yetkisi güncelleme başarısız");
-      } else {
-        // Kullanıcı profillerini yeniden yükle
-        const { data, error } = await supabase
-          .from("kullanici_profilleri")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (!error && data) {
-          setKullaniciProfilleri(data);
-        }
-        
-        alert(`Admin yetkisi ${newAdminStatus ? 'verildi' : 'kaldırıldı'}!`);
-      }
     } catch (err) {
       setError(String(err.message || err));
     } finally {
@@ -669,21 +611,12 @@ export default function PersonelYonetimi({ onChanged }) {
                     <button
                       key={p.kullanici_id}
                       type="button"
-                      className="personel-collapsed-card"
+                      className="personel-collapsed-card personel-collapsed-card--name-only"
                       onClick={() => setDetailPersonel(p)}
                     >
-                      <div className="personel-collapsed-card-top">
-                        <div>
-                          <div className="personel-collapsed-card-name">
-                            {p.isim} {p.soyisim}
-                          </div>
-                          <div className="personel-collapsed-card-id">ID: {p.kullanici_id}</div>
-                        </div>
-                        <span className={`personel-status-badge${p.aktif ? " personel-status-badge--active" : " personel-status-badge--inactive"}`}>
-                          {p.aktif ? "Aktif" : "Pasif"}
-                        </span>
+                      <div className="personel-collapsed-card-name">
+                        {p.isim} {p.soyisim}
                       </div>
-                      <div className="personel-collapsed-card-hint">Detay için dokunun</div>
                     </button>
                   ))
                 )}
@@ -921,103 +854,6 @@ export default function PersonelYonetimi({ onChanged }) {
           >
             {editingId && renderEditFormFields(handleEditSubmit, closeEditPersonel)}
           </Modal>
-
-                     {/* Kullanıcı Profilleri Yönetimi - Sadece Admin */}
-           {userProfile && userProfile.is_admin && (
-            <div style={{ marginTop: "40px" }}>
-            <h3 style={{ marginBottom: "20px", color: "#374151", fontSize: "18px", fontWeight: "600" }}>
-              Kullanıcı Hesapları Yönetimi
-            </h3>
-            
-            <div style={{
-              backgroundColor: "white",
-              borderRadius: "8px",
-              border: "1px solid #e5e7eb",
-              overflow: "hidden",
-              boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)"
-            }}>
-              <table className="mobile-table" style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ backgroundColor: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>
-                      E-posta
-                    </th>
-                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>
-                      İsim
-                    </th>
-                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>
-                      Soyisim
-                    </th>
-                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>
-                      Kullanıcı ID
-                    </th>
-                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>
-                      Admin
-                    </th>
-                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>
-                      Kayıt Tarihi
-                    </th>
-                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#374151" }}>
-                      İşlemler
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {kullaniciProfilleri.map((profile) => (
-                    <tr key={profile.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                      <td data-label="E-posta" style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>
-                        {profile.email}
-                      </td>
-                      <td data-label="İsim" style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>
-                        {profile.isim || "-"}
-                      </td>
-                      <td data-label="Soyisim" style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>
-                        {profile.soyisim || "-"}
-                      </td>
-                      <td data-label="Kullanıcı ID" style={{ padding: "12px 16px", fontSize: "14px", color: "#374151" }}>
-                        {profile.kullanici_id}
-                      </td>
-                      <td data-label="Admin" style={{ padding: "12px 16px", fontSize: "14px" }}>
-                        <span style={{
-                          padding: "4px 8px",
-                          borderRadius: "4px",
-                          fontSize: "12px",
-                          fontWeight: "500",
-                          backgroundColor: profile.is_admin ? "#dcfce7" : "#fef3c7",
-                          color: profile.is_admin ? "#166534" : "#92400e"
-                        }}>
-                          {profile.is_admin ? "Admin" : "Kullanıcı"}
-                        </span>
-                      </td>
-                      <td data-label="Kayıt Tarihi" style={{ padding: "12px 16px", fontSize: "14px", color: "#6b7280" }}>
-                        {new Date(profile.created_at).toLocaleDateString('tr-TR')}
-                      </td>
-                      <td data-label="İşlemler" style={{ padding: "12px 16px", fontSize: "14px" }}>
-                        <button
-                          onClick={() => handleToggleAdmin(profile.email, profile.is_admin)}
-                          disabled={loading}
-                          style={{
-                            padding: "6px 12px",
-                            fontSize: "12px",
-                            backgroundColor: profile.is_admin ? "#f59e0b" : "#3b82f6",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "4px",
-                            cursor: loading ? "not-allowed" : "pointer",
-                            fontWeight: "500",
-                            transition: "all 0.2s"
-                          }}
-                        >
-                          {profile.is_admin ? "Admin Yetkisini Kaldır" : "Admin Yap"}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          )}
         </>
       ) : (
         <div style={{ padding: "20px", backgroundColor: "#fef3c7", border: "1px solid #f59e0b", borderRadius: "8px" }}>

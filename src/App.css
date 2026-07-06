@@ -1171,6 +1171,80 @@
   transform: scale(0.98);
 }
 
+.personel-collapsed-card--name-only {
+  display: flex;
+  align-items: center;
+}
+
+.personel-collapsed-card--name-only .personel-collapsed-card-name {
+  margin: 0;
+}
+
+.kullanici-hesaplari-section {
+  margin-top: 8px;
+}
+
+.kullanici-hesaplari-title {
+  margin: 0 0 16px;
+  color: #374151;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.kullanici-hesaplari-table-wrap {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.kullanici-hesaplari-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.kullanici-hesaplari-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.kullanici-hesaplari-table td {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.kullanici-admin-toggle-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.kullanici-admin-toggle-btn[data-admin="true"] {
+  background: #f59e0b;
+}
+
+.kullanici-admin-toggle-btn[data-admin="false"] {
+  background: #3b82f6;
+}
+
+.kullanici-admin-toggle-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .personel-delete-btn {
   margin-top: 4px;
 }
