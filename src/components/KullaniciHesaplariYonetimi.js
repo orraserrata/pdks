@@ -12,16 +12,6 @@ export default function KullaniciHesaplariYonetimi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [detailProfile, setDetailProfile] = useState(null);
-  const [isMobileViewport, setIsMobileViewport] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches
-  );
-
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 768px)");
-    const onChange = (e) => setIsMobileViewport(e.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
 
   async function loadKullaniciProfilleri() {
     try {
@@ -71,77 +61,30 @@ export default function KullaniciHesaplariYonetimi() {
   }
 
   return (
-    <div className="kullanici-hesaplari-section">
-      <h3 className="kullanici-hesaplari-title">Kullanıcı Hesapları Yönetimi</h3>
+    <div className="admin-section">
+      <h3 className="admin-section-title">Kullanıcı Hesapları Yönetimi</h3>
 
       {error && <div className="personel-error">{error}</div>}
 
-      {isMobileViewport ? (
-        <div className="personel-mobile-list">
-          {kullaniciProfilleri.length === 0 ? (
-            <div className="personel-empty">Kullanıcı bulunamadı.</div>
-          ) : (
-            kullaniciProfilleri.map((profile) => (
-              <button
-                key={profile.id}
-                type="button"
-                className="personel-collapsed-card personel-collapsed-card--name-only"
-                onClick={() => setDetailProfile(profile)}
-              >
-                <div className="personel-collapsed-card-name">{getDisplayName(profile)}</div>
-              </button>
-            ))
-          )}
-        </div>
+      {kullaniciProfilleri.length === 0 ? (
+        <div className="personel-empty">Kullanıcı bulunamadı.</div>
       ) : (
-        <div className="kullanici-hesaplari-table-wrap">
-          <table className="mobile-table kullanici-hesaplari-table">
-            <thead>
-              <tr>
-                <th>E-posta</th>
-                <th>İsim</th>
-                <th>Soyisim</th>
-                <th>Kullanıcı ID</th>
-                <th>Admin</th>
-                <th>Kayıt Tarihi</th>
-                <th>İşlemler</th>
-              </tr>
-            </thead>
-            <tbody>
-              {kullaniciProfilleri.map((profile) => (
-                <tr key={profile.id}>
-                  <td data-label="E-posta">{profile.email}</td>
-                  <td data-label="İsim">{profile.isim || "-"}</td>
-                  <td data-label="Soyisim">{profile.soyisim || "-"}</td>
-                  <td data-label="Kullanıcı ID">{profile.kullanici_id}</td>
-                  <td data-label="Admin">
-                    <span className={`personel-status-badge${profile.is_admin ? " personel-status-badge--active" : " personel-status-badge--inactive"}`}>
-                      {profile.is_admin ? "Admin" : "Kullanıcı"}
-                    </span>
-                  </td>
-                  <td data-label="Kayıt Tarihi">
-                    {new Date(profile.created_at).toLocaleDateString("tr-TR")}
-                  </td>
-                  <td data-label="İşlemler">
-                    <button
-                      type="button"
-                      className="kullanici-admin-toggle-btn"
-                      onClick={() => handleToggleAdmin(profile.email, profile.is_admin)}
-                      disabled={loading}
-                      data-admin={profile.is_admin ? "true" : "false"}
-                    >
-                      {profile.is_admin ? "Admin Yetkisini Kaldır" : "Admin Yap"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="personel-mobile-list">
+          {kullaniciProfilleri.map((profile) => (
+            <button
+              key={profile.id}
+              type="button"
+              className="personel-collapsed-card personel-collapsed-card--name-only"
+              onClick={() => setDetailProfile(profile)}
+            >
+              <div className="personel-collapsed-card-name">{getDisplayName(profile)}</div>
+            </button>
+          ))}
         </div>
       )}
 
       <Modal
-        open={isMobileViewport && !!detailProfile}
+        open={!!detailProfile}
         onClose={() => setDetailProfile(null)}
         title={detailProfile ? getDisplayName(detailProfile) : "Kullanıcı Detayı"}
       >

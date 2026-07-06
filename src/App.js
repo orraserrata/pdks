@@ -6,7 +6,6 @@ import CalisanDetay from "./components/CalisanDetay";
 import PersonelYonetimi from "./components/PersonelYonetimi";
 import AdminPanel from "./components/AdminPanel";
 import AdminLogin from "./components/AdminLogin";
-import AdminSettings from "./components/AdminSettings";
 import TumCalisanlar from "./components/TumCalisanlar";
 import HataBildirimleriListesi from "./components/HataBildirimleriListesi";
 import HesapOlustur from "./components/HesapOlustur";
@@ -422,8 +421,6 @@ function App() {
         ) : activeTab === 'admin' && userProfile?.is_admin ? (
           <div className="card">
             <AdminPanel />
-            <div style={{ height: 12 }} />
-            <AdminSettings />
           </div>
         ) : activeTab === 'izinTalepleri' ? (
           <div className="card">

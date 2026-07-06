@@ -1582,3 +1582,86 @@ table .btn-toggle-status {
   color: #dc2626;
   font-weight: 700;
 }
+
+/* Admin sayfası */
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-page > h2 {
+  margin: 0 0 8px;
+}
+
+.admin-section {
+  margin-bottom: 28px;
+}
+
+.admin-section:last-child {
+  margin-bottom: 0;
+}
+
+.admin-section-title {
+  margin: 0 0 14px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.admin-message {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.admin-message--success {
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+}
+
+.maas-btn--danger {
+  background: #dc2626;
+  color: #fff;
+}
+
+.maas-btn--danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.maas-btn--secondary {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.maas-btn--secondary:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.personel-detail-actions .maas-btn {
+  width: 100%;
+}
+
+@media (min-width: 769px) {
+  .admin-section .personel-add-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    border-top: 1px solid #f3f4f6;
+  }
+
+  .admin-section .personel-add-footer .maas-btn {
+    width: auto;
+    min-width: 140px;
+  }
+
+  .admin-section .personel-mobile-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+  }
+}

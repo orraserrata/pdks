@@ -1,14 +1,15 @@
 import React from "react";
 import SifreYonetimi from "./SifreYonetimi";
 import KullaniciHesaplariYonetimi from "./KullaniciHesaplariYonetimi";
+import AdminSettings from "./AdminSettings";
 
 export default function AdminPanel() {
   return (
-    <div>
-      <h2>Admin Panel</h2>
+    <div className="admin-page">
+      <h2>Admin</h2>
       <SifreYonetimi />
-      <div style={{ height: 32 }} />
       <KullaniciHesaplariYonetimi />
+      <AdminSettings />
     </div>
   );
 }

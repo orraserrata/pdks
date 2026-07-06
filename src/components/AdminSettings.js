@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
+import Modal from "./Modal";
 
 export default function AdminSettings() {
   const [session, setSession] = useState(null);
@@ -7,6 +8,7 @@ export default function AdminSettings() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [detailAdmin, setDetailAdmin] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -68,6 +70,7 @@ export default function AdminSettings() {
     try {
       const { error: rpcErr } = await supabase.rpc("remove_admin_by_email", { p_email: targetEmail });
       if (rpcErr) throw rpcErr;
+      setDetailAdmin(null);
       await loadAdmins();
     } catch (e) {
       setError(String(e.message || e));
@@ -79,43 +82,91 @@ export default function AdminSettings() {
   if (!session) return null;
 
   return (
-    <div>
-      <h3>Admin Yönetimi</h3>
-      <div className="responsive-flex" style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
-        <button disabled={loading} onClick={bootstrapSelf}>İlk admin olarak kendimi ata</button>
-        <label>
-          E-posta ile admin ekle
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={{ marginLeft: 6 }} />
-        </label>
-        <button disabled={loading || !email.trim()} onClick={addAdmin}>Ekle</button>
+    <div className="admin-section">
+      <h3 className="admin-section-title">Admin Yönetimi</h3>
+
+      <div className="personel-add-card">
+        <div className="personel-form-grid personel-form-grid--add">
+          <div className="personel-form-field personel-form-field--span-full-mobile">
+            <label htmlFor="admin-add-email">E-posta ile Admin Ekle</label>
+            <input
+              id="admin-add-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@email.com"
+            />
+          </div>
+        </div>
+        <div className="personel-add-footer">
+          <button
+            type="button"
+            className="maas-btn maas-btn--secondary"
+            onClick={bootstrapSelf}
+            disabled={loading}
+          >
+            İlk admin olarak kendimi ata
+          </button>
+          <button
+            type="button"
+            className="maas-btn maas-btn--primary"
+            onClick={addAdmin}
+            disabled={loading || !email.trim()}
+          >
+            Ekle
+          </button>
+        </div>
       </div>
 
-      {error && <div style={{ color: "red", marginTop: 8 }}>{error}</div>}
+      {error && <div className="personel-error">{error}</div>}
 
-      <div className="mobile-scroll-wrap" style={{ marginTop: 12 }}>
-        <table border="1" className="mobile-scroll-table" style={{ borderCollapse: "collapse", width: "100%" }}>
-          <thead>
-            <tr>
-              <th>E-posta</th>
-              <th>Kullanıcı ID</th>
-              <th>İşlem</th>
-            </tr>
-          </thead>
-          <tbody>
-            {admins.map((a) => (
-              <tr key={a.user_id}>
-                <td>{a.email}</td>
-                <td>{a.user_id}</td>
-                <td>
-                  <button disabled={loading} onClick={() => removeAdmin(a.email)}>Kaldır</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {admins.length === 0 ? (
+        <div className="personel-empty">Kayıtlı admin bulunamadı.</div>
+      ) : (
+        <div className="personel-mobile-list">
+          {admins.map((a) => (
+            <button
+              key={a.user_id}
+              type="button"
+              className="personel-collapsed-card personel-collapsed-card--name-only"
+              onClick={() => setDetailAdmin(a)}
+            >
+              <div className="personel-collapsed-card-name">{a.email}</div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <Modal
+        open={!!detailAdmin}
+        onClose={() => setDetailAdmin(null)}
+        title={detailAdmin?.email || "Admin Detayı"}
+      >
+        {detailAdmin && (
+          <div className="personel-detail-dialog">
+            <div className="personel-detail-grid">
+              <div className="personel-detail-item personel-detail-item--full">
+                <span className="personel-detail-label">E-posta</span>
+                <span className="personel-detail-value">{detailAdmin.email}</span>
+              </div>
+              <div className="personel-detail-item personel-detail-item--full">
+                <span className="personel-detail-label">Kullanıcı ID</span>
+                <span className="personel-detail-value">{detailAdmin.user_id}</span>
+              </div>
+            </div>
+            <div className="personel-detail-actions">
+              <button
+                type="button"
+                className="maas-btn maas-btn--danger"
+                disabled={loading}
+                onClick={() => removeAdmin(detailAdmin.email)}
+              >
+                Admin Yetkisini Kaldır
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
-
-
