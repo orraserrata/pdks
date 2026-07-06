@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { fetchMaasHedefleri, calcBirimUcret, DEFAULT_HEDEFLER } from '../utils/maasHedefleri';
 
 const Maasim = ({ session, userProfile }) => {
   const [maasBilgileri, setMaasBilgileri] = useState(null);
+  const [maasTipi, setMaasTipi] = useState('saatli');
+  const [hedefAyarlari, setHedefAyarlari] = useState({ ...DEFAULT_HEDEFLER });
   const [calismaSaatleri, setCalismaSaatleri] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -29,10 +32,16 @@ const Maasim = ({ session, userProfile }) => {
 
   useEffect(() => {
     if (session && userProfile) {
+      loadHedefAyarlari();
       fetchMaasBilgileri();
       fetchCalismaSaatleri();
     }
   }, [session, userProfile, selectedMonth, selectedYear]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadHedefAyarlari = async () => {
+    const { hedefler } = await fetchMaasHedefleri();
+    setHedefAyarlari(hedefler);
+  };
 
   const fetchMaasBilgileri = async () => {
     try {
@@ -41,18 +50,26 @@ const Maasim = ({ session, userProfile }) => {
         return;
       }
 
-      const { data, error } = await supabase
-        .from('maas_ayarlari')
-        .select('*')
-        .eq('kullanici_id', userProfile.kullanici_id)
-        .eq('aktif', true)
-        .single();
+      const [{ data, error }, { data: personelData }] = await Promise.all([
+        supabase
+          .from('maas_ayarlari')
+          .select('*')
+          .eq('kullanici_id', userProfile.kullanici_id)
+          .eq('aktif', true)
+          .single(),
+        supabase
+          .from('personel')
+          .select('maas_tipi')
+          .eq('kullanici_id', userProfile.kullanici_id)
+          .maybeSingle(),
+      ]);
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      if (error && error.code !== 'PGRST116') {
         throw error;
       }
 
       setMaasBilgileri(data);
+      setMaasTipi(personelData?.maas_tipi || 'saatli');
     } catch (error) {
       console.error('Maaş bilgileri yükleme hatası:', error);
       setError('Maaş bilgileri yüklenirken hata oluştu');
@@ -67,12 +84,21 @@ const Maasim = ({ session, userProfile }) => {
 
       setLoading(true);
 
+      const monthStart = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-01`;
+      let endYear = selectedYear;
+      let endMonth = selectedMonth + 1;
+      if (endMonth > 12) {
+        endMonth = 1;
+        endYear += 1;
+      }
+      const monthEnd = `${endYear}-${endMonth.toString().padStart(2, '0')}-01`;
+
       const { data, error } = await supabase
         .from('personel_giris_cikis_duzenli')
         .select('*')
         .eq('kullanici_id', userProfile.kullanici_id)
-        .gte('giris_tarihi', `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-01`)
-        .lt('giris_tarihi', `${selectedYear}-${(selectedMonth + 1).toString().padStart(2, '0')}-01`)
+        .gte('giris_tarihi', monthStart)
+        .lt('giris_tarihi', monthEnd)
         .order('giris_tarihi', { ascending: true });
 
       if (error) throw error;
@@ -97,6 +123,15 @@ const Maasim = ({ session, userProfile }) => {
     return `${Math.floor(hours)}:${Math.round((hours % 1) * 60).toString().padStart(2, '0')}`;
   };
 
+  const calculateTotalDays = () => {
+    const gunler = new Set();
+    calismaSaatleri.forEach((record) => {
+      const day = record.workday_date || record.giris_tarihi?.split('T')[0];
+      if (day) gunler.add(day);
+    });
+    return gunler.size;
+  };
+
   const calculateTotalHours = () => {
     let totalHours = 0;
     calismaSaatleri.forEach(record => {
@@ -110,10 +145,19 @@ const Maasim = ({ session, userProfile }) => {
     return totalHours;
   };
 
+  const isGunluk = maasTipi === 'gunluk';
+  const birimUcret = maasBilgileri
+    ? (isGunluk
+      ? calcBirimUcret(maasBilgileri.aylik_maas, 'gunluk', hedefAyarlari)
+      : maasBilgileri.saat_bazli_maas)
+    : 0;
+
   const calculateEarnedSalary = () => {
     if (!maasBilgileri) return 0;
-    const totalHours = calculateTotalHours();
-    return totalHours * maasBilgileri.saat_bazli_maas;
+    if (isGunluk) {
+      return calculateTotalDays() * birimUcret;
+    }
+    return calculateTotalHours() * birimUcret;
   };
 
   if (!session) {
@@ -147,6 +191,7 @@ const Maasim = ({ session, userProfile }) => {
   }
 
   const totalHours = calculateTotalHours();
+  const totalDays = calculateTotalDays();
   const earnedSalary = calculateEarnedSalary();
   const salaryDifference = earnedSalary - maasBilgileri.aylik_maas;
 
@@ -220,9 +265,9 @@ const Maasim = ({ session, userProfile }) => {
           borderRadius: '8px',
           backgroundColor: '#f8f9fa'
         }}>
-          <h4>Saatlik Ücret</h4>
+          <h4>{isGunluk ? 'Günlük Ücret' : 'Saatlik Ücret'}</h4>
           <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#6f42c1' }}>
-            {formatCurrency(maasBilgileri.saat_bazli_maas)}
+            {formatCurrency(birimUcret)}
           </p>
         </div>
 
@@ -237,6 +282,20 @@ const Maasim = ({ session, userProfile }) => {
             {formatHours(totalHours)}
           </p>
         </div>
+
+        {isGunluk && (
+          <div style={{ 
+            border: '1px solid #ddd', 
+            padding: '20px', 
+            borderRadius: '8px',
+            backgroundColor: '#f8f9fa'
+          }}>
+            <h4>Çalışılan Gün</h4>
+            <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#0d6efd' }}>
+              {totalDays}
+            </p>
+          </div>
+        )}
 
         <div style={{ 
           border: '1px solid #ddd', 
@@ -299,11 +358,22 @@ const Maasim = ({ session, userProfile }) => {
                 </tr>
               </thead>
               <tbody>
-                {calismaSaatleri.map((record, index) => {
+                {(() => {
+                  const seenDays = new Set();
+                  return calismaSaatleri.map((record, index) => {
                   const giris = new Date(record.giris_tarihi);
                   const cikis = record.cikis_tarihi ? new Date(record.cikis_tarihi) : null;
                   const calisilanSaat = cikis ? (cikis - giris) / (1000 * 60 * 60) : 0;
-                  const kazanc = calisilanSaat * maasBilgileri.saat_bazli_maas;
+                  const day = record.workday_date || record.giris_tarihi?.split('T')[0];
+                  let kazanc = 0;
+                  if (isGunluk) {
+                    if (day && !seenDays.has(day)) {
+                      seenDays.add(day);
+                      kazanc = birimUcret;
+                    }
+                  } else {
+                    kazanc = calisilanSaat * birimUcret;
+                  }
                   const isAdminLocked = record.admin_locked;
 
                   return (
@@ -356,7 +426,8 @@ const Maasim = ({ session, userProfile }) => {
                       </td>
                     </tr>
                   );
-                })}
+                });
+                })()}
               </tbody>
             </table>
           </div>
