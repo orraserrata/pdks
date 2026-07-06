@@ -391,3 +391,260 @@
     word-break: break-word;
   }
 }
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+.modal-panel {
+  background: #fff;
+  border-radius: 14px;
+  width: min(520px, 100%);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+  touch-action: auto;
+}
+
+.modal-panel--wide {
+  width: min(960px, 100%);
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.35;
+  padding-right: 8px;
+}
+
+.modal-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: #f3f4f6;
+  color: #4b5563;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s, color 0.15s, transform 0.15s;
+}
+
+.modal-close-btn:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.modal-close-btn:active {
+  transform: scale(0.96);
+}
+
+.modal-body {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding: 16px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Çalışan detay — tarih filtreleri */
+.calisan-date-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.calisan-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.calisan-date-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.calisan-date-field input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.calisan-total-badge {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #3730a3;
+}
+
+/* Çalışan detay — gün kartları (dialog / mobil) */
+.calisan-gun-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.calisan-gun-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.calisan-gun-card--absent {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.calisan-gun-card--edited {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.calisan-gun-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.calisan-gun-card--absent .calisan-gun-card-header {
+  background: #fef3c7;
+  border-bottom-color: #fcd34d;
+}
+
+.calisan-gun-card--edited .calisan-gun-card-header {
+  background: #fee2e2;
+  border-bottom-color: #fca5a5;
+}
+
+.calisan-gun-card-date {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.calisan-gun-card-weekday {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.calisan-gun-card-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.calisan-gun-card-badge--ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.calisan-gun-card-badge--absent {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.calisan-gun-card-badge--edited {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.calisan-gun-card-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.calisan-gun-interval {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px 10px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #f3f4f6;
+}
+
+.calisan-gun-interval-label {
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.calisan-gun-interval-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.calisan-gun-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.calisan-gun-card-actions button {
+  padding: 7px 12px;
+  font-size: 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-hata { background: #dc2626; color: #fff; }
+.btn-edit { background: #3b82f6; color: #fff; }
+.btn-delete { background: #ef4444; color: #fff; }
+.btn-add { background: #10b981; color: #fff; }

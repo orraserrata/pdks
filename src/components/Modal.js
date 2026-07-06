@@ -1,44 +1,58 @@
-import React from "react";
+import React, { useEffect } from "react";
 
-export default function Modal({ open, onClose, children, title, wide = false }) {
+export default function Modal({ open, onClose, children, title, wide = false, zIndex = 1000 }) {
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const prevOverflow = document.body.style.overflow;
+    const prevPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = prevPaddingRight;
+    };
+  }, [open]);
+
   if (!open) return null;
+
   return (
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1000,
-        padding: "16px",
-      }}
+      className="modal-overlay"
+      style={{ zIndex }}
       onClick={onClose}
     >
       <div
-        style={{
-          background: "#fff",
-          borderRadius: 12,
-          width: wide ? "min(960px, 100%)" : "min(520px, 92vw)",
-          maxHeight: "90vh",
-          display: "flex",
-          flexDirection: "column",
-          padding: 16,
-          boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
-        }}
+        className={`modal-panel${wide ? " modal-panel--wide" : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, flexShrink: 0 }}>
-          <h3 style={{ margin: 0 }}>{title || ""}</h3>
-          <button type="button" onClick={onClose}>Kapat</button>
+        <div className="modal-header">
+          <h3 className="modal-title">{title || ""}</h3>
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={onClose}
+            aria-label="Kapat"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M18 6L6 18M6 6l12 12"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
         </div>
-        <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
+        <div className="modal-body">
           {children}
         </div>
       </div>
     </div>
   );
 }
-
-

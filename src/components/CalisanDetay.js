@@ -125,31 +125,135 @@ function CalisanDetay({ calisan, inDialog = false }) {
     return { ...k, girisDt, cikisDt, displayDate, sure };
   });
 
-  // Günlük satırları üret (bir günde birden çok aralık olabilir)
-  const gunlerWithData = gunler
-    .map((gun) => {
-      const dateStr = format(gun, "yyyy-MM-dd");
-      const recs = recordsForDisplay
-        .filter((r) => r.displayDate === dateStr)
-        .sort((a, b) => a.girisDt - b.girisDt);
-      if (recs.length === 0) {
-        return [{ tarih: dateStr, gun: format(new Date(dateStr), "EEEE", { locale: trLocale }), giris: "-", cikis: "Devamsız", sure: 0, _row: null }];
-      }
-      return recs.map((r) => ({
-        tarih: dateStr,
-        gun: format(new Date(dateStr), "EEEE", { locale: trLocale }),
-        giris: format(r.girisDt, "HH:mm"),
-        cikis: r.cikisDt ? format(r.cikisDt, "HH:mm") : "-",
-        sure: r.sure,
-        _row: r,
-      }));
-    })
-    .flat();
+  // Günlük gruplar
+  const gunGruplari = gunler.map((gun) => {
+    const dateStr = format(gun, "yyyy-MM-dd");
+    const recs = recordsForDisplay
+      .filter((r) => r.displayDate === dateStr)
+      .sort((a, b) => a.girisDt - b.girisDt);
 
-  // Toplam süre
+    const kayitlar = recs.length === 0
+      ? [{ giris: "-", cikis: "Devamsız", sure: 0, _row: null, isAbsent: true }]
+      : recs.map((r) => ({
+          giris: format(r.girisDt, "HH:mm"),
+          cikis: r.cikisDt ? format(r.cikisDt, "HH:mm") : "-",
+          sure: r.sure,
+          _row: r,
+          isAbsent: false,
+        }));
+
+    return {
+      dateStr,
+      gunAdi: format(gun, "EEEE", { locale: trLocale }),
+      gunKisa: format(gun, "d MMM yyyy", { locale: trLocale }),
+      kayitlar,
+      isAbsent: recs.length === 0,
+      hasEdited: kayitlar.some((k) => k._row?.admin_locked),
+      gunToplam: kayitlar.reduce((s, k) => s + k.sure, 0),
+    };
+  });
+
+  const gunlerWithData = gunGruplari.flatMap((grup) =>
+    grup.kayitlar.map((k) => ({
+      tarih: grup.dateStr,
+      gun: grup.gunAdi,
+      giris: k.giris,
+      cikis: k.cikis,
+      sure: k.sure,
+      _row: k._row,
+    }))
+  );
+
   const toplamSure = gunlerWithData
     .reduce((sum, g) => sum + g.sure, 0)
     .toFixed(2);
+
+  async function refreshGirisCikis() {
+    const endExclusive = format(addDays(new Date(bitis), 1), "yyyy-MM-dd");
+    const { data } = await supabase
+      .from("personel_giris_cikis_duzenli")
+      .select("*")
+      .eq("kullanici_id", calisan.kullanici_id ?? calisan.id)
+      .gte("giris_tarihi", baslangic)
+      .lt("giris_tarihi", endExclusive)
+      .order("giris_tarihi", { ascending: true });
+    setGirisCikis(data || []);
+  }
+
+  function startEdit(row) {
+    setEditing(row);
+    setLockChecked(row.admin_locked !== false);
+    const toLocal = (v) => {
+      if (!v) return "";
+      const d = new Date(v);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const hh = String(d.getHours()).padStart(2, "0");
+      const min = String(d.getMinutes()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+    };
+    setEditValues({
+      giris: toLocal(row.giris_tarihi),
+      cikis: toLocal(row.cikis_tarihi),
+    });
+  }
+
+  function startNew(grup) {
+    setEditing({
+      isNew: true,
+      kullanici_id: calisan.kullanici_id ?? calisan.id,
+      displayDate: grup.dateStr,
+    });
+    setLockChecked(false);
+    setEditValues({ giris: `${grup.dateStr}T08:00`, cikis: `${grup.dateStr}T17:00` });
+  }
+
+  async function handleDeleteRow(row) {
+    if (!window.confirm("Bu kaydı silmek istiyor musunuz?")) return;
+    const { error } = await supabase
+      .from("personel_giris_cikis_duzenli")
+      .delete()
+      .eq("id", row.id);
+    if (!error) {
+      await refreshGirisCikis();
+    } else {
+      alert(error.message || "Silme başarısız");
+    }
+  }
+
+  function openHataBildir(grup, kayit) {
+    setSelectedRecord({
+      calisan,
+      tarih: grup.dateStr,
+      giris: kayit.isAbsent ? "-" : kayit.giris,
+      cikis: kayit.isAbsent ? "Devamsız" : kayit.cikis,
+    });
+    setShowHataBildirimi(true);
+  }
+
+  function renderAdminActions(grup, kayit) {
+    if (!session || !userProfile?.is_admin) return null;
+
+    if (kayit._row) {
+      return (
+        <>
+          <button type="button" className="btn-edit" onClick={() => startEdit(kayit._row)}>
+            Düzenle
+          </button>
+          <button type="button" className="btn-delete" onClick={() => handleDeleteRow(kayit._row)}>
+            Sil
+          </button>
+        </>
+      );
+    }
+
+    return (
+      <button type="button" className="btn-add" onClick={() => startNew(grup)}>
+        Ekle
+      </button>
+    );
+  }
 
   return (
     <div>
@@ -161,60 +265,95 @@ function CalisanDetay({ calisan, inDialog = false }) {
         </h2>
       )}
 
-      <div className="responsive-flex" style={{ 
-        display: "flex", 
-        gap: "16px", 
-        marginBottom: "20px", 
-        alignItems: "center",
-        backgroundColor: "#f8fafc",
-        borderRadius: "8px",
-        border: "1px solid #e2e8f0"
-      }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151" }}>Başlangıç:</label>
-          <input 
-            type="date" 
-            value={baslangic} 
+      <div className="calisan-date-filters">
+        <div className="calisan-date-field">
+          <label>Başlangıç</label>
+          <input
+            type="date"
+            value={baslangic}
             onChange={(e) => setBaslangic(e.target.value)}
-            style={{
-              padding: "8px 12px",
-              border: "1px solid #d1d5db",
-              borderRadius: "6px",
-              fontSize: "14px",
-              backgroundColor: "white"
-            }}
           />
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151" }}>Bitiş:</label>
-          <input 
-            type="date" 
-            value={bitis} 
+        <div className="calisan-date-field">
+          <label>Bitiş</label>
+          <input
+            type="date"
+            value={bitis}
             onChange={(e) => setBitis(e.target.value)}
-            style={{
-              padding: "8px 12px",
-              border: "1px solid #d1d5db",
-              borderRadius: "6px",
-              fontSize: "14px",
-              backgroundColor: "white"
-            }}
           />
         </div>
       </div>
 
-      <div style={{
-        marginBottom: "12px",
-        padding: "10px 12px",
-        backgroundColor: "#eef2ff",
-        border: "1px solid #c7d2fe",
-        borderRadius: "8px",
-        fontSize: "14px",
-        fontWeight: "600",
-        color: "#3730a3"
-      }}>
+      <div className="calisan-total-badge">
         Toplam Süre: {toplamSure} saat
       </div>
 
+      {inDialog ? (
+        <div className="calisan-gun-list">
+          {gunGruplari.map((grup) => {
+            const cardClass = grup.isAbsent
+              ? "calisan-gun-card calisan-gun-card--absent"
+              : grup.hasEdited
+                ? "calisan-gun-card calisan-gun-card--edited"
+                : "calisan-gun-card";
+
+            const badgeClass = grup.isAbsent
+              ? "calisan-gun-card-badge calisan-gun-card-badge--absent"
+              : grup.hasEdited
+                ? "calisan-gun-card-badge calisan-gun-card-badge--edited"
+                : "calisan-gun-card-badge calisan-gun-card-badge--ok";
+
+            const badgeText = grup.isAbsent
+              ? "Devamsız"
+              : grup.hasEdited
+                ? "Düzeltilmiş"
+                : `${grup.gunToplam.toFixed(2)} saat`;
+
+            return (
+              <div key={grup.dateStr} className={cardClass}>
+                <div className="calisan-gun-card-header">
+                  <div>
+                    <div className="calisan-gun-card-date">{grup.gunKisa}</div>
+                    <div className="calisan-gun-card-weekday">{grup.gunAdi}</div>
+                  </div>
+                  <span className={badgeClass}>{badgeText}</span>
+                </div>
+
+                <div className="calisan-gun-card-body">
+                  {grup.kayitlar.map((kayit, idx) => (
+                    <div key={idx}>
+                      <div className="calisan-gun-interval">
+                        <div>
+                          <div className="calisan-gun-interval-label">Giriş</div>
+                          <div className="calisan-gun-interval-value">{kayit.giris}</div>
+                        </div>
+                        <div>
+                          <div className="calisan-gun-interval-label">Çıkış</div>
+                          <div className="calisan-gun-interval-value">{kayit.cikis}</div>
+                        </div>
+                        <div>
+                          <div className="calisan-gun-interval-label">Süre</div>
+                          <div className="calisan-gun-interval-value">{kayit.sure.toFixed(2)} sa</div>
+                        </div>
+                      </div>
+                      <div className="calisan-gun-card-actions">
+                        <button
+                          type="button"
+                          className="btn-hata"
+                          onClick={() => openHataBildir(grup, kayit)}
+                        >
+                          Hata Bildir
+                        </button>
+                        {renderAdminActions(grup, kayit)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
       <div className="mobile-scroll-wrap" style={{ 
         overflowX: "auto", 
         borderRadius: "8px", 
@@ -334,14 +473,10 @@ function CalisanDetay({ calisan, inDialog = false }) {
                 }}>{g.sure.toFixed(2)}</td>
                 <td data-label="Hata Bildir" style={{ padding: "16px 12px" }}>
                   <button
+                    type="button"
                     onClick={() => {
-                      setSelectedRecord({
-                        calisan: calisan,
-                        tarih: g.tarih,
-                        giris: row ? g.giris : '-',
-                        cikis: row ? g.cikis : 'Devamsız'
-                      });
-                      setShowHataBildirimi(true);
+                      const grup = gunGruplari.find((gr) => gr.dateStr === g.tarih);
+                      if (grup) openHataBildir(grup, { giris: g.giris, cikis: g.cikis, isAbsent: !row });
                     }}
                     style={{
                       padding: "8px 16px",
@@ -371,26 +506,7 @@ function CalisanDetay({ calisan, inDialog = false }) {
                   <td data-label="İşlem" style={{ padding: "16px 12px" }}>
                     {row ? (
                       <div className="responsive-flex" style={{ display: "flex", gap: "8px" }}>
-                        <button 
-                          onClick={() => {
-                          setEditing(row);
-                          setLockChecked(row.admin_locked !== false);
-                          const toLocal = (v) => {
-                            if (!v) return "";
-                            const d = new Date(v);
-                            const yyyy = d.getFullYear();
-                            const mm = String(d.getMonth() + 1).padStart(2, "0");
-                            const dd = String(d.getDate()).padStart(2, "0");
-                            const hh = String(d.getHours()).padStart(2, "0");
-                            const min = String(d.getMinutes()).padStart(2, "0");
-                            return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-                          };
-                          setEditValues({
-                            giris: toLocal(row.giris_tarihi),
-                            cikis: toLocal(row.cikis_tarihi),
-                          });
-                          }}
-                          style={{
+                        <button type="button" onClick={() => startEdit(row)} style={{
                             padding: "8px 16px",
                             fontSize: "13px",
                             backgroundColor: "#3b82f6",
@@ -413,27 +529,7 @@ function CalisanDetay({ calisan, inDialog = false }) {
                         >
                           Düzenle
                         </button>
-                        <button 
-                          onClick={async () => {
-                            if (!window.confirm('Bu kaydı silmek istiyor musunuz?')) return;
-                            const { error } = await supabase
-                              .from('personel_giris_cikis_duzenli')
-                              .delete()
-                              .eq('id', row.id);
-                            if (!error) {
-                              const { data } = await supabase
-                                .from('personel_giris_cikis_duzenli')
-                                .select('*')
-                                .eq('kullanici_id', calisan.kullanici_id ?? calisan.id)
-                                .gte('giris_tarihi', baslangic)
-                                .lte('giris_tarihi', bitis)
-                                .order('giris_tarihi', { ascending: true });
-                              setGirisCikis(data || []);
-                            } else {
-                              alert(error.message || 'Silme başarısız');
-                            }
-                          }}
-                          style={{
+                        <button type="button" onClick={() => handleDeleteRow(row)} style={{
                             padding: "8px 16px",
                             fontSize: "13px",
                             backgroundColor: "#ef4444",
@@ -458,12 +554,11 @@ function CalisanDetay({ calisan, inDialog = false }) {
                         </button>
                       </div>
                     ) : (
-                      <button 
+                      <button
+                        type="button"
                         onClick={() => {
-                          // Devamsız gün için yeni kayıt ekle
-                          setEditing({ isNew: true, kullanici_id: calisan.kullanici_id ?? calisan.id, displayDate: g.tarih });
-                          setLockChecked(false);
-                          setEditValues({ giris: `${g.tarih}T08:00`, cikis: `${g.tarih}T17:00` });
+                          const grup = gunGruplari.find((gr) => gr.dateStr === g.tarih);
+                          if (grup) startNew(grup);
                         }}
                         style={{
                           padding: "8px 16px",
@@ -516,11 +611,13 @@ function CalisanDetay({ calisan, inDialog = false }) {
         </tfoot>
       </table>
       </div>
+      )}
 
       <Modal
         open={Boolean(editing)}
         onClose={() => setEditing(null)}
         title="Saatleri Düzenle"
+        zIndex={1100}
       >
         <div className="responsive-flex" style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
           <label>
@@ -583,15 +680,7 @@ function CalisanDetay({ calisan, inDialog = false }) {
               }
               if (!error) {
                 setEditing(null);
-                // yenile
-                const { data } = await supabase
-                  .from('personel_giris_cikis_duzenli')
-                  .select('*')
-                  .eq('kullanici_id', calisan.kullanici_id ?? calisan.id)
-                  .gte('giris_tarihi', baslangic)
-                  .lte('giris_tarihi', bitis)
-                  .order('giris_tarihi', { ascending: true });
-                setGirisCikis(data || []);
+                await refreshGirisCikis();
               } else {
                 alert(error.message || 'Güncelleme başarısız');
               }
@@ -607,14 +696,7 @@ function CalisanDetay({ calisan, inDialog = false }) {
                 .eq('id', editing.id);
               if (!error) {
                 setEditing(null);
-                const { data } = await supabase
-                  .from('personel_giris_cikis_duzenli')
-                  .select('*')
-                  .eq('kullanici_id', calisan.kullanici_id ?? calisan.id)
-                  .gte('giris_tarihi', baslangic)
-                  .lte('giris_tarihi', bitis)
-                  .order('giris_tarihi', { ascending: true });
-                setGirisCikis(data || []);
+                await refreshGirisCikis();
               } else {
                 alert(error.message || 'Temizleme başarısız');
               }
