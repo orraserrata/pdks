@@ -3,6 +3,40 @@ import { differenceInCalendarDays } from "date-fns";
 export const YILLIK_IZIN_GUN = 14;
 export const PART_TIME_IZIN_ESIK_GUN = 300;
 
+export function parseLocalDate(dateStr) {
+  if (!dateStr) return null;
+  const [y, m, d] = String(dateStr).split("T")[0].split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
+}
+
+/** Bitiş tarihi eksklüsif: bitis = son izin gününün ertesi günü */
+export function calcIzinGunSayisi(baslangic, bitis) {
+  const start = parseLocalDate(baslangic);
+  const end = parseLocalDate(bitis);
+  if (!start || !end) return 0;
+  const days = differenceInCalendarDays(end, start);
+  return days > 0 ? days : 0;
+}
+
+/** Seçilen tarih aralığı (dahil) içindeki izin gün sayısı; izin bitişi eksklüsif */
+export function calcIzinGunInRange(izinBaslangic, izinBitisExclusive, rangeStartStr, rangeEndStr) {
+  const izinStart = parseLocalDate(izinBaslangic);
+  const izinEndExclusive = parseLocalDate(izinBitisExclusive);
+  const rangeStart = parseLocalDate(rangeStartStr);
+  const rangeEnd = parseLocalDate(rangeEndStr);
+  if (!izinStart || !izinEndExclusive || !rangeStart || !rangeEnd) return 0;
+
+  const izinLastDay = new Date(izinEndExclusive);
+  izinLastDay.setDate(izinLastDay.getDate() - 1);
+
+  const effectiveStart = izinStart > rangeStart ? izinStart : rangeStart;
+  const effectiveEnd = izinLastDay < rangeEnd ? izinLastDay : rangeEnd;
+
+  if (effectiveStart > effectiveEnd) return 0;
+  return differenceInCalendarDays(effectiveEnd, effectiveStart) + 1;
+}
+
 export const CALISMA_TIPI_OPTIONS = [
   { value: "full_time", label: "Tam Zamanlı" },
   { value: "part_time", label: "Yarı Zamanlı" },

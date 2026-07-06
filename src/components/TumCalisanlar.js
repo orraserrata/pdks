@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
-import { format, eachDayOfInterval, addDays } from "date-fns";
-import { tr as trLocale } from "date-fns/locale";
+import { format, addDays } from "date-fns";
+import { calcIzinGunInRange } from "../utils/yillikIzin";
+
+function formatYillikIzinGun(gun) {
+  return gun > 0 ? String(gun) : "-";
+}
 
 function TumCalisanlar() {
   const [personeller, setPersoneller] = useState([]);
@@ -10,7 +14,6 @@ function TumCalisanlar() {
   const [bitis, setBitis] = useState(format(new Date(), "yyyy-MM-dd"));
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("active"); // "all", "active", "inactive"
-  const dayStartHour = 5;
 
   useEffect(() => {
     async function fetchPersoneller() {
@@ -46,17 +49,32 @@ function TumCalisanlar() {
       if (personeller.length === 0) return;
 
       const endExclusive = format(addDays(new Date(bitis), 1), "yyyy-MM-dd");
-      const { data, error } = await supabase
-        .from("personel_giris_cikis_duzenli")
-        .select("*")
-        .gte("giris_tarihi", baslangic)
-        .lt("giris_tarihi", endExclusive)
-        .order("giris_tarihi", { ascending: true });
+      const [{ data, error }, { data: izinData, error: izinError }] = await Promise.all([
+        supabase
+          .from("personel_giris_cikis_duzenli")
+          .select("*")
+          .gte("giris_tarihi", baslangic)
+          .lt("giris_tarihi", endExclusive)
+          .order("giris_tarihi", { ascending: true }),
+        supabase
+          .from("izin_talepleri")
+          .select("kullanici_id, baslangic_tarihi, bitis_tarihi")
+          .eq("durum", "onaylandi")
+          .eq("izin_tipi", "yillik_izin")
+          .lte("baslangic_tarihi", bitis)
+          .gt("bitis_tarihi", baslangic),
+      ]);
 
       if (error) {
         console.error("Hata:", error);
         return;
       }
+
+      if (izinError) {
+        console.error("İzin verisi hatası:", izinError);
+      }
+
+      const izinKayitlari = izinData || [];
 
       // Her çalışan için toplam süreyi hesapla
       const detaylar = {};
@@ -72,9 +90,21 @@ function TumCalisanlar() {
           }
         });
 
+        const kisiIzinleri = izinKayitlari.filter((t) => t.kullanici_id === calisan.kullanici_id);
+        let yillikIzinGun = 0;
+        kisiIzinleri.forEach((t) => {
+          yillikIzinGun += calcIzinGunInRange(
+            t.baslangic_tarihi,
+            t.bitis_tarihi,
+            baslangic,
+            bitis
+          );
+        });
+
         detaylar[calisan.kullanici_id] = {
           toplamSure: toplamSure.toFixed(2),
-          kayitSayisi: new Set(calisanKayitlari.map(k => k.workday_date || k.giris_tarihi?.split('T')[0])).size
+          kayitSayisi: new Set(calisanKayitlari.map(k => k.workday_date || k.giris_tarihi?.split('T')[0])).size,
+          yillikIzinGun,
         };
       });
 
@@ -116,17 +146,19 @@ function TumCalisanlar() {
             <th>Ad Soyad</th>
             <th>Toplam Süre (Saat)</th>
             <th>İşe Gelinen Gün</th>
+            <th>Kullanılan Yıllık İzin</th>
           </tr>
         </thead>
             <tbody>
               ${personeller.map((calisan, index) => {
-                const detay = calisanDetaylari[calisan.kullanici_id] || { toplamSure: "0.00", kayitSayisi: 0 };
+                const detay = calisanDetaylari[calisan.kullanici_id] || { toplamSure: "0.00", kayitSayisi: 0, yillikIzinGun: 0 };
                 return `
                   <tr>
                     <td>${index + 1}</td>
                     <td>${(calisan.isim || "")} ${(calisan.soyisim || "")}</td>
                     <td>${detay.toplamSure}</td>
                     <td>${detay.kayitSayisi}</td>
+                    <td>${formatYillikIzinGun(detay.yillikIzinGun)}</td>
                   </tr>
                 `;
               }).join('')}
@@ -244,24 +276,26 @@ function TumCalisanlar() {
             <th>Ad Soyad</th>
             <th>Toplam Süre (Saat)</th>
             <th>İşe Gelinen Gün</th>
+            <th>Kullanılan Yıllık İzin</th>
           </tr>
         </thead>
         <tbody>
           {personeller.map((calisan, index) => {
-            const detay = calisanDetaylari[calisan.kullanici_id] || { toplamSure: "0.00", kayitSayisi: 0 };
+            const detay = calisanDetaylari[calisan.kullanici_id] || { toplamSure: "0.00", kayitSayisi: 0, yillikIzinGun: 0 };
             return (
               <tr key={calisan.kullanici_id}>
                 <td data-label="Sıra">{index + 1}</td>
                 <td data-label="Ad Soyad">{(calisan.isim || "")} {(calisan.soyisim || "")}</td>
                 <td data-label="Toplam Süre (Saat)">{detay.toplamSure}</td>
                 <td data-label="İşe Gelinen Gün">{detay.kayitSayisi}</td>
+                <td data-label="Kullanılan Yıllık İzin">{formatYillikIzinGun(detay.yillikIzinGun)}</td>
               </tr>
             );
           })}
         </tbody>
         <tfoot>
           <tr>
-            <td colSpan="3" style={{ textAlign: "right", fontWeight: "bold" }}>
+            <td colSpan="4" style={{ textAlign: "right", fontWeight: "bold" }}>
               Toplam Çalışan:
             </td>
             <td>{personeller.length}</td>
