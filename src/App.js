@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import './App.css';
 import CalisanListesi from "./components/CalisanListesi";
@@ -16,6 +16,19 @@ import LoadingSpinner from "./components/LoadingSpinner";
 import MaasHesabi from "./components/MaasHesabi";
 import Maasim from "./components/Maasim";
 import IzinTalepleri from "./components/IzinTalepleri";
+
+function getProfileInitial(userProfile, email) {
+  const isim = userProfile?.isim?.trim();
+  if (isim) return isim.charAt(0).toLocaleUpperCase("tr-TR");
+
+  const soyisim = userProfile?.soyisim?.trim();
+  if (soyisim) return soyisim.charAt(0).toLocaleUpperCase("tr-TR");
+
+  const mail = email?.trim();
+  if (mail) return mail.charAt(0).toLocaleUpperCase("tr-TR");
+
+  return "?";
+}
 
 function App() {
   const [personeller, setPersoneller] = useState([]);
@@ -35,6 +48,8 @@ function App() {
   const [passwordResetError, setPasswordResetError] = useState('');
   const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef(null);
   const [isMobileViewport, setIsMobileViewport] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches
   );
@@ -45,6 +60,29 @@ function App() {
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, []);
+
+  useEffect(() => {
+    if (!isAccountMenuOpen) return;
+
+    function handleClickOutside(event) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target)) {
+        setIsAccountMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        setIsAccountMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isAccountMenuOpen]);
 
   async function fetchPersoneller() {
     const { data, error } = await supabase
@@ -373,36 +411,44 @@ function App() {
             </div>
           </div>
           <div className="toolbar-right">
-            <div className={`account${session ? " account--logged-in" : ""}`}>
+            <div className={`account${session ? " account--logged-in" : ""}`} ref={accountMenuRef}>
               {session ? (
                 <>
-                  <div
-                    className="account-profile"
-                    title={session.user?.email || ""}
-                    aria-label={session.user?.email || "Profil"}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                      <circle cx="12" cy="8" r="4" />
-                      <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" />
-                    </svg>
-                  </div>
                   <button
                     type="button"
-                    className="account-logout-btn"
-                    onClick={async () => {
-                      try {
-                        await supabase.auth.signOut();
-                        setSession(null);
-                        setUserProfile(null);
-                        localStorage.clear();
-                        sessionStorage.clear();
-                      } catch (error) {
-                        console.error("Çıkış hatası:", error);
-                      }
-                    }}
+                    className="account-profile-btn"
+                    onClick={() => setIsAccountMenuOpen((open) => !open)}
+                    aria-expanded={isAccountMenuOpen}
+                    aria-haspopup="true"
+                    aria-label="Hesap menüsü"
                   >
-                    Çıkış
+                    <span className="account-profile-initial" aria-hidden="true">
+                      {getProfileInitial(userProfile, session.user?.email)}
+                    </span>
                   </button>
+                  {isAccountMenuOpen && (
+                    <div className="account-menu">
+                      <div className="account-menu-email">{session.user?.email}</div>
+                      <button
+                        type="button"
+                        className="account-logout-btn"
+                        onClick={async () => {
+                          try {
+                            await supabase.auth.signOut();
+                            setSession(null);
+                            setUserProfile(null);
+                            setIsAccountMenuOpen(false);
+                            localStorage.clear();
+                            sessionStorage.clear();
+                          } catch (error) {
+                            console.error("Çıkış hatası:", error);
+                          }
+                        }}
+                      >
+                        Çıkış
+                      </button>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
