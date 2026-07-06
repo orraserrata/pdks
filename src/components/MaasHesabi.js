@@ -193,6 +193,7 @@ const MaasHesabi = () => {
       setAddSalary('');
       setAddTargetHours('');
       fetchMaasAyarlari();
+      fetchMaasRaporu();
     } catch (error) {
       console.error('Maaş ekleme hatası:', error);
       alert('Maaş eklenirken hata oluştu: ' + error.message);

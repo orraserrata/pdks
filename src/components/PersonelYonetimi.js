@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
+import { ensureMaasAyari, syncMaasAyariAktif } from "../utils/maasAyarlari";
 
 const MAAS_TIPI_OPTIONS = [
   { value: "saatli", label: "Saatli Maaş" },
@@ -160,6 +161,14 @@ export default function PersonelYonetimi({ onChanged }) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
+  async function reloadPersoneller() {
+    let query = supabase.from("personel").select("*");
+    if (filter === "active") query = query.eq("aktif", true);
+    else if (filter === "inactive") query = query.eq("aktif", false);
+    const { data, error } = await query.order("isim", { ascending: true });
+    if (!error && data) setPersoneller(data);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!isValid) return;
@@ -182,14 +191,13 @@ export default function PersonelYonetimi({ onChanged }) {
       if (insertError) {
         setError(insertError.message || "Kayıt eklenemedi");
       } else {
+        const { error: maasError } = await ensureMaasAyari(payload.kullanici_id, payload.aktif);
+        if (maasError) {
+          console.warn("Maaş ayarı oluşturulamadı:", maasError);
+        }
+
         setForm({ kullanici_id: "", isim: "", soyisim: "", ise_giris_tarihi: "", aktif: true, maas_tipi: "saatli" });
-
-        let query = supabase.from("personel").select("*");
-        if (filter === "active") query = query.eq("aktif", true);
-        else if (filter === "inactive") query = query.eq("aktif", false);
-        const { data } = await query.order("isim", { ascending: true });
-        if (data) setPersoneller(data);
-
+        await reloadPersoneller();
         if (onChanged) onChanged();
       }
     } catch (err) {
@@ -219,6 +227,11 @@ export default function PersonelYonetimi({ onChanged }) {
         return;
       }
 
+      const { error: maasSyncError } = await syncMaasAyariAktif(kullaniciId, newStatus);
+      if (maasSyncError) {
+        console.warn("Maaş ayarı durumu güncellenemedi:", maasSyncError);
+      }
+
       // Eğer pasif yapılıyorsa, mevcut verileri admin_locked=true yap
       if (!newStatus) {
         const { error: lockError } = await supabase
@@ -240,14 +253,7 @@ export default function PersonelYonetimi({ onChanged }) {
       }
 
       // Personelleri yeniden yükle
-      const { data, error } = await supabase
-        .from("personel")
-        .select("*")
-        .order("isim", { ascending: true });
-
-      if (!error && data) {
-        setPersoneller(data);
-      }
+      await reloadPersoneller();
 
       alert(`Personel ${action} yapıldı!`);
     } catch (err) {
@@ -346,18 +352,14 @@ export default function PersonelYonetimi({ onChanged }) {
       if (updateError) {
         setError(updateError.message || "Güncelleme başarısız");
       } else {
+        const { error: maasSyncError } = await syncMaasAyariAktif(editingId, editForm.aktif);
+        if (maasSyncError) {
+          console.warn("Maaş ayarı durumu güncellenemedi:", maasSyncError);
+        }
+
         setEditingId(null);
         setEditForm({ isim: "", soyisim: "", ise_giris_tarihi: "", aktif: true, maas_tipi: "saatli" });
-        
-        // Personelleri yeniden yükle
-        const { data, error } = await supabase
-          .from("personel")
-          .select("*")
-          .order("isim", { ascending: true });
-
-        if (!error && data) {
-          setPersoneller(data);
-        }
+        await reloadPersoneller();
 
         alert("Personel güncellendi!");
       }

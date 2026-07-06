@@ -209,6 +209,24 @@ def _split_name(full_name: str):
         return parts[0], ""
     return parts[0], parts[1]
 
+def ensure_maas_ayari(kullanici_id, aktif=True):
+    """Personel için maaş ayarı yoksa varsayılan kayıt oluşturur."""
+    existing = supabase.table("maas_ayarlari").select("kullanici_id").eq("kullanici_id", kullanici_id).execute()
+    if getattr(existing, 'data', []):
+        return
+
+    payload = {
+        "kullanici_id": kullanici_id,
+        "aylik_maas": 0,
+        "hedef_saat": 240,
+        "aktif": aktif,
+    }
+    res = supabase.table("maas_ayarlari").insert(payload).execute()
+    if getattr(res, 'error', None):
+        print("Hata maas_ayarlari insert:", getattr(res, 'error', None))
+    else:
+        print(f"Maaş ayarı eklendi: kullanici_id={kullanici_id}")
+
 def ensure_personel(users_map, attendance_list):
     """Cihazdaki kullanıcıları personel tablosuna (eksikleri) ekle.
     ise_giris_tarihi olarak kullanıcının ilk attendance gününü veya bugünü kullanır.
@@ -262,6 +280,7 @@ def ensure_personel(users_map, attendance_list):
             print("Hata personel insert:", getattr(res, 'error', None))
         else:
             print(f"Personel eklendi: {payload}")
+            ensure_maas_ayari(user_id_int, aktif=True)
 
 def save_pairs(pairs):
     """Giriş-çıkış çiftlerini düzenli tabloya kaydet.
