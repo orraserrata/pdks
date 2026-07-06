@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
+import {
+  fetchMaasHedefleri,
+  saveMaasHedef,
+  calcBirimUcret,
+  getHedefDeger,
+  DEFAULT_HEDEFLER,
+} from '../utils/maasHedefleri';
 
 const MAAS_TIPI_TABS = [
   { value: 'saatli', label: 'Saatlik Maaş Alanlar' },
@@ -23,10 +30,12 @@ const MaasHesabi = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedPersonel, setSelectedPersonel] = useState('');
   const [addSalary, setAddSalary] = useState('');
-  const [addTargetHours, setAddTargetHours] = useState('');
   const [editingSalary, setEditingSalary] = useState(null);
   const [newSalary, setNewSalary] = useState('');
-  const [newTargetHours, setNewTargetHours] = useState('');
+
+  const [hedefAyarlari, setHedefAyarlari] = useState({ ...DEFAULT_HEDEFLER });
+  const [hedefInputs, setHedefInputs] = useState({ ...DEFAULT_HEDEFLER });
+  const [hedefSaving, setHedefSaving] = useState(false);
   
   // Maaş raporu için state'ler
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -70,14 +79,48 @@ const MaasHesabi = () => {
   }, [maasRaporu, reportMaasTipi]);
 
   useEffect(() => {
+    loadHedefAyarlari();
     fetchMaasAyarlari();
     fetchAvailablePersonel();
-    fetchMaasRaporu();
   }, []);
 
   useEffect(() => {
     fetchMaasRaporu();
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, hedefAyarlari]);
+
+  const loadHedefAyarlari = async () => {
+    const { hedefler, error } = await fetchMaasHedefleri();
+    if (!error) {
+      setHedefAyarlari(hedefler);
+      setHedefInputs(hedefler);
+    }
+  };
+
+  const handleSaveHedefAyarlari = async () => {
+    const saatli = parseInt(hedefInputs.saatli, 10);
+    const gunluk = parseInt(hedefInputs.gunluk, 10);
+    if (!saatli || saatli <= 0 || !gunluk || gunluk <= 0) {
+      alert('Hedef saat ve hedef gün pozitif bir sayı olmalıdır.');
+      return;
+    }
+
+    setHedefSaving(true);
+    try {
+      const { error: saatliErr } = await saveMaasHedef('saatli', saatli);
+      if (saatliErr) throw saatliErr;
+      const { error: gunlukErr } = await saveMaasHedef('gunluk', gunluk);
+      if (gunlukErr) throw gunlukErr;
+
+      const yeni = { saatli, gunluk };
+      setHedefAyarlari(yeni);
+      setHedefInputs(yeni);
+      alert('Hedef ayarları kaydedildi.');
+    } catch (err) {
+      alert('Hedef kaydedilemedi: ' + (err.message || err));
+    } finally {
+      setHedefSaving(false);
+    }
+  };
 
   const fetchMaasAyarlari = async () => {
     try {
@@ -148,7 +191,8 @@ const MaasHesabi = () => {
           });
 
           const calisilanGun = gunler.size;
-          const gunlukUcret = maas.saat_bazli_maas;
+          const hedef = getHedefDeger('gunluk', hedefAyarlari);
+          const gunlukUcret = calcBirimUcret(maas.aylik_maas, 'gunluk', hedefAyarlari);
           const hesaplananMaas = calisilanGun * gunlukUcret;
           const fark = hesaplananMaas - maas.aylik_maas;
 
@@ -158,7 +202,7 @@ const MaasHesabi = () => {
             soyisim: maas.personel?.soyisim || '',
             maas_tipi: 'gunluk',
             aylik_maas: maas.aylik_maas,
-            hedef: maas.hedef_saat,
+            hedef,
             calisilan: calisilanGun,
             birim_ucret: gunlukUcret,
             hesaplanan_maas: hesaplananMaas,
@@ -175,7 +219,9 @@ const MaasHesabi = () => {
             }
           });
 
-          const hesaplananMaas = toplamSaat * maas.saat_bazli_maas;
+          const hedef = getHedefDeger('saatli', hedefAyarlari);
+          const saatlikUcret = calcBirimUcret(maas.aylik_maas, 'saatli', hedefAyarlari);
+          const hesaplananMaas = toplamSaat * saatlikUcret;
           const fark = hesaplananMaas - maas.aylik_maas;
 
           raporData.push({
@@ -184,9 +230,9 @@ const MaasHesabi = () => {
             soyisim: maas.personel?.soyisim || '',
             maas_tipi: 'saatli',
             aylik_maas: maas.aylik_maas,
-            hedef: maas.hedef_saat,
+            hedef,
             calisilan: toplamSaat,
-            birim_ucret: maas.saat_bazli_maas,
+            birim_ucret: saatlikUcret,
             hesaplanan_maas: hesaplananMaas,
             fark,
           });
@@ -223,12 +269,11 @@ const MaasHesabi = () => {
   };
 
   const addNewSalary = async () => {
-    if (!selectedPersonel || !addSalary || !addTargetHours) {
-      alert('Lütfen tüm alanları doldurun');
+    if (!selectedPersonel || !addSalary) {
+      alert('Lütfen personel ve aylık maaş alanlarını doldurun');
       return;
     }
 
-    // Duplicate kontrolü
     const existing = maasAyarlari.find(ma => ma.kullanici_id === parseInt(selectedPersonel));
     if (existing) {
       alert('Bu personel için zaten maaş ayarı mevcut');
@@ -241,7 +286,7 @@ const MaasHesabi = () => {
         .insert({
           kullanici_id: parseInt(selectedPersonel),
           aylik_maas: parseFloat(addSalary),
-          hedef_saat: parseInt(addTargetHours),
+          hedef_saat: hedefAyarlari.saatli,
           aktif: true
         });
 
@@ -251,7 +296,6 @@ const MaasHesabi = () => {
       setShowAddForm(false);
       setSelectedPersonel('');
       setAddSalary('');
-      setAddTargetHours('');
       fetchMaasAyarlari();
       fetchMaasRaporu();
     } catch (error) {
@@ -261,8 +305,8 @@ const MaasHesabi = () => {
   };
 
   const updateSalary = async (kullaniciId) => {
-    if (!newSalary || !newTargetHours) {
-      alert('Lütfen tüm alanları doldurun');
+    if (!newSalary) {
+      alert('Lütfen aylık maaş alanını doldurun');
       return;
     }
 
@@ -271,7 +315,6 @@ const MaasHesabi = () => {
         .from('maas_ayarlari')
         .update({
           aylik_maas: parseFloat(newSalary),
-          hedef_saat: parseInt(newTargetHours)
         })
         .eq('kullanici_id', kullaniciId);
 
@@ -280,7 +323,6 @@ const MaasHesabi = () => {
       alert('Maaş ayarı başarıyla güncellendi');
       setEditingSalary(null);
       setNewSalary('');
-      setNewTargetHours('');
       fetchMaasAyarlari();
       fetchMaasRaporu();
     } catch (error) {
@@ -546,6 +588,59 @@ const MaasHesabi = () => {
       {/* Maaş Ayarları Sekmesi */}
       {activeSubTab === 'ayarlar' && (
         <div>
+          {/* Merkezi hedef ayarları */}
+          <div style={{
+            marginBottom: '24px',
+            padding: '20px',
+            border: '2px solid #3b82f6',
+            borderRadius: '8px',
+            backgroundColor: '#eff6ff',
+          }}>
+            <h3 style={{ margin: '0 0 8px 0', color: '#1e40af' }}>Genel Hedef Ayarları</h3>
+            <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#374151' }}>
+              Tüm saatlik personel için hedef saat ve tüm günlük personel için hedef gün buradan tek seferde güncellenir.
+            </p>
+            <div className="responsive-flex" style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
+                  Hedef Saat (Saatlik)
+                </label>
+                <input
+                  type="number"
+                  value={hedefInputs.saatli}
+                  onChange={(e) => setHedefInputs((prev) => ({ ...prev, saatli: e.target.value }))}
+                  style={{ padding: '8px 12px', width: '120px', border: '1px solid #93c5fd', borderRadius: '6px' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
+                  Hedef Gün (Günlük)
+                </label>
+                <input
+                  type="number"
+                  value={hedefInputs.gunluk}
+                  onChange={(e) => setHedefInputs((prev) => ({ ...prev, gunluk: e.target.value }))}
+                  style={{ padding: '8px 12px', width: '120px', border: '1px solid #93c5fd', borderRadius: '6px' }}
+                />
+              </div>
+              <button
+                onClick={handleSaveHedefAyarlari}
+                disabled={hedefSaving}
+                style={{
+                  padding: '8px 20px',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: hedefSaving ? 'not-allowed' : 'pointer',
+                  fontWeight: '600',
+                }}
+              >
+                {hedefSaving ? 'Kaydediliyor...' : 'Hedefleri Kaydet'}
+              </button>
+            </div>
+          </div>
+
           <div style={{ marginBottom: '20px' }}>
             <div className="responsive-flex" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               {MAAS_TIPI_TABS.map((tab) => (
@@ -557,7 +652,6 @@ const MaasHesabi = () => {
                     setEditingSalary(null);
                     setSelectedPersonel('');
                     setAddSalary('');
-                    setAddTargetHours('');
                   }}
                   style={{
                     padding: '10px 20px',
@@ -651,18 +745,7 @@ const MaasHesabi = () => {
                       style={{ marginLeft: '5px', padding: '5px', width: '120px' }}
                     />
                   </div>
-                  
-                  <div>
-                    <label>{isGunluk ? 'Hedef Gün:' : 'Hedef Saat:'}</label>
-                    <input
-                      type="number"
-                      value={addTargetHours}
-                      onChange={(e) => setAddTargetHours(e.target.value)}
-                      placeholder={isGunluk ? '22' : '240'}
-                      style={{ marginLeft: '5px', padding: '5px', width: '100px' }}
-                    />
-                  </div>
-                  
+
                   <div style={{ display: 'flex', gap: '5px' }}>
                     <button
                       onClick={addNewSalary}
@@ -682,7 +765,6 @@ const MaasHesabi = () => {
                         setShowAddForm(false);
                         setSelectedPersonel('');
                         setAddSalary('');
-                        setAddTargetHours('');
                       }}
                       style={{ 
                         padding: '5px 10px', 
@@ -709,9 +791,6 @@ const MaasHesabi = () => {
                     <th style={{ border: '1px solid #ddd', padding: '8px' }}>Ad Soyad</th>
                     <th style={{ border: '1px solid #ddd', padding: '8px' }}>Aylık Maaş</th>
                     <th style={{ border: '1px solid #ddd', padding: '8px' }}>
-                      {isGunluk ? 'Hedef Gün' : 'Hedef Saat'}
-                    </th>
-                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>
                       {isGunluk ? 'Günlük Ücret' : 'Saatlik Ücret'}
                     </th>
                     <th style={{ border: '1px solid #ddd', padding: '8px' }}>İşlemler</th>
@@ -720,11 +799,14 @@ const MaasHesabi = () => {
                 <tbody>
                   {filteredMaasAyarlari.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ border: '1px solid #ddd', padding: '16px', textAlign: 'center', color: '#6b7280' }}>
+                      <td colSpan={5} style={{ border: '1px solid #ddd', padding: '16px', textAlign: 'center', color: '#6b7280' }}>
                         Bu kategoride aktif personel bulunmuyor.
                       </td>
                     </tr>
-                  ) : filteredMaasAyarlari.map((ayar) => (
+                  ) : filteredMaasAyarlari.map((ayar) => {
+                    const tip = getPersonelMaasTipi(ayar.personel);
+                    const birimUcret = calcBirimUcret(ayar.aylik_maas, tip, hedefAyarlari);
+                    return (
                     <tr key={ayar.kullanici_id}>
                       <td style={{ border: '1px solid #ddd', padding: '8px' }}>{ayar.kullanici_id}</td>
                       <td style={{ border: '1px solid #ddd', padding: '8px' }}>
@@ -744,20 +826,10 @@ const MaasHesabi = () => {
                         )}
                       </td>
                       <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                        {editingSalary === ayar.kullanici_id ? (
-                          <input
-                            type="number"
-                            value={newTargetHours}
-                            onChange={(e) => setNewTargetHours(e.target.value)}
-                            placeholder={isGunluk ? 'Hedef gün' : 'Hedef saat'}
-                            style={{ width: '80px', padding: '4px' }}
-                          />
-                        ) : (
-                          `${ayar.hedef_saat} ${isGunluk ? 'gün' : 'saat'}`
-                        )}
-                      </td>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                        {formatCurrency(ayar.saat_bazli_maas)}
+                        {formatCurrency(birimUcret)}
+                        <div style={{ fontSize: '11px', color: '#6b7280' }}>
+                          (Hedef: {getHedefDeger(tip, hedefAyarlari)} {isGunluk ? 'gün' : 'saat'})
+                        </div>
                       </td>
                       <td style={{ border: '1px solid #ddd', padding: '8px' }}>
                         {editingSalary === ayar.kullanici_id ? (
@@ -779,7 +851,6 @@ const MaasHesabi = () => {
                               onClick={() => {
                                 setEditingSalary(null);
                                 setNewSalary('');
-                                setNewTargetHours('');
                               }}
                               style={{ 
                                 padding: '4px 8px', 
@@ -798,7 +869,6 @@ const MaasHesabi = () => {
                             onClick={() => {
                               setEditingSalary(ayar.kullanici_id);
                               setNewSalary(ayar.aylik_maas.toString());
-                              setNewTargetHours(ayar.hedef_saat.toString());
                             }}
                             style={{ 
                               padding: '4px 8px', 
@@ -814,7 +884,8 @@ const MaasHesabi = () => {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

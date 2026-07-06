@@ -1,6 +1,5 @@
 import { supabase } from "../supabaseClient";
-
-export const DEFAULT_HEDEF_SAAT = 240;
+import { fetchMaasHedefleri, DEFAULT_HEDEFLER } from "./maasHedefleri";
 
 /** Maaş ayarı yoksa varsayılan kayıt oluşturur. */
 export async function ensureMaasAyari(kullaniciId, aktif = true) {
@@ -13,10 +12,12 @@ export async function ensureMaasAyari(kullaniciId, aktif = true) {
   if (fetchError) return { created: false, error: fetchError };
   if (existing) return { created: false, error: null };
 
+  const { hedefler } = await fetchMaasHedefleri();
+
   const { error } = await supabase.from("maas_ayarlari").insert({
     kullanici_id: kullaniciId,
     aylik_maas: 0,
-    hedef_saat: DEFAULT_HEDEF_SAAT,
+    hedef_saat: hedefler.saatli || DEFAULT_HEDEFLER.saatli,
     aktif,
   });
 
