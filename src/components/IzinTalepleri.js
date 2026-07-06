@@ -21,7 +21,7 @@ function calcIzinGunSayisi(baslangic, bitis) {
   const start = parseLocalDate(baslangic);
   const end = parseLocalDate(bitis);
   if (!start || !end) return 0;
-  const days = differenceInCalendarDays(end, start) + 1;
+  const days = differenceInCalendarDays(end, start);
   return days > 0 ? days : 0;
 }
 
@@ -193,8 +193,8 @@ export default function IzinTalepleri() {
       return;
     }
 
-    if (formBitis < formBaslangic) {
-      setFormError("Bitiş tarihi başlangıç tarihinden önce olamaz.");
+    if (formBitis <= formBaslangic) {
+      setFormError("Bitiş tarihi başlangıç tarihinden sonra olmalıdır.");
       return;
     }
 
@@ -213,7 +213,6 @@ export default function IzinTalepleri() {
           aciklama: formAciklama.trim() || null,
           durum: "beklemede",
           talep_tarihi: new Date().toISOString(),
-          bitis_inclusive_migrated: true,
         });
 
       if (insertError) {
@@ -453,16 +452,19 @@ export default function IzinTalepleri() {
     }
   }
 
-  // Bitiş tarihi dahil: 30 Haziran–2 Temmuz = 3 gün (30, 1, 2)
+  // Bitiş tarihi eksklüsif: son izin gününün ertesi günü girilir (30 Haz–3 Tem = 30,1,2 → 3 gün)
   function calculateDaysInMonth(baslangic, bitis, year, month) {
     const monthStart = new Date(year, month - 1, 1);
     const monthEnd = new Date(year, month, 0);
     const izinStart = parseLocalDate(baslangic);
-    const izinEnd = parseLocalDate(bitis);
-    if (!izinStart || !izinEnd) return 0;
+    const izinEndExclusive = parseLocalDate(bitis);
+    if (!izinStart || !izinEndExclusive) return 0;
+
+    const izinLastDay = new Date(izinEndExclusive);
+    izinLastDay.setDate(izinLastDay.getDate() - 1);
 
     const effectiveStart = izinStart > monthStart ? izinStart : monthStart;
-    const effectiveEnd = izinEnd < monthEnd ? izinEnd : monthEnd;
+    const effectiveEnd = izinLastDay < monthEnd ? izinLastDay : monthEnd;
 
     if (effectiveStart > effectiveEnd) return 0;
     return differenceInCalendarDays(effectiveEnd, effectiveStart) + 1;
@@ -556,7 +558,14 @@ export default function IzinTalepleri() {
   }
 
   function getMinBitis() {
-    return formBaslangic || "";
+    if (!formBaslangic) return "";
+    const d = parseLocalDate(formBaslangic);
+    if (!d) return "";
+    d.setDate(d.getDate() + 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
   }
 
   function getIzinGunSayisi() {
@@ -661,7 +670,7 @@ export default function IzinTalepleri() {
                   onChange={(e) => {
                     setFormBaslangic(e.target.value);
                     // Bitiş tarihi başlangıçtan önceyse temizle
-                    if (formBitis && formBitis < e.target.value) {
+                    if (formBitis && formBitis <= e.target.value) {
                       setFormBitis("");
                     }
                   }}
@@ -679,6 +688,9 @@ export default function IzinTalepleri() {
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151" }}>
                   Bitiş Tarihi *
+                  <span style={{ fontWeight: "400", color: "#6b7280", marginLeft: "6px", fontSize: "12px" }}>
+                    (son izin gününün ertesi günü)
+                  </span>
                   {izinGunSayisi && (
                     <span style={{ fontWeight: "400", color: "#6b7280", marginLeft: "6px" }}>
                       ({izinGunSayisi} gün)

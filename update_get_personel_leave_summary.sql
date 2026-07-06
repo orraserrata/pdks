@@ -38,7 +38,7 @@ AS $$
   FROM personel p
   LEFT JOIN LATERAL (
     SELECT SUM(
-      GREATEST(0, (t.bitis_tarihi::date - t.baslangic_tarihi::date) + 1)
+      GREATEST(0, (t.bitis_tarihi::date - t.baslangic_tarihi::date))
     ) AS used_leave
     FROM izin_talepleri t
     WHERE t.kullanici_id = p.kullanici_id
