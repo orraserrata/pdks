@@ -1240,11 +1240,7 @@ export default function IzinTalepleri() {
                         padding: "10px 8px", textAlign: "center", fontWeight: "700",
                         backgroundColor: "#e0e7ff", color: "#3730a3",
                         border: "1px solid #c7d2fe", whiteSpace: "nowrap",
-                      }} title={
-                        isPartTime({ calisma_tipi: row.calismaTipi })
-                          ? `Yarı zamanlı: fiili çalışma günü / ${TAM_ZAMANLI_YILLIK_CALISMA_GUN} × ${YILLIK_IZIN_GUN}`
-                          : `Her 1 tam yıl kıdem = ${YILLIK_IZIN_GUN} gün`
-                      }>HAK EDİLEN</th>
+                      }} title={`Tam zamanlı: her tam yıl kıdem = ${YILLIK_IZIN_GUN} gün | Yarı zamanlı: çalışılan gün / ${TAM_ZAMANLI_YILLIK_CALISMA_GUN} × ${YILLIK_IZIN_GUN}`}>HAK EDİLEN</th>
                       <th style={{
                         padding: "10px 8px", textAlign: "center", fontWeight: "700",
                         backgroundColor: "#e0e7ff", color: "#3730a3",
