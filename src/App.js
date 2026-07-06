@@ -308,7 +308,7 @@ function App() {
       <div className="App container">
         <div className="toolbar">
           <div className="toolbar-left">
-            <h1 className="appTitle">PDKS</h1>
+            <img src="/logo.svg" alt="PDKS" className="app-logo" />
           </div>
           <div className="toolbar-center">
             <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>

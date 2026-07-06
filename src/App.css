@@ -4,19 +4,10 @@
   padding: 24px;
 }
 
-.appTitle {
-  font-size: 24px;
-  font-weight: 700;
-  margin: 0;
-  color: #111827;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.appTitle::before {
-  content: "🏢";
-  font-size: 28px;
+.app-logo {
+  height: 36px;
+  width: auto;
+  display: block;
 }
 
 .tabs {
@@ -96,9 +87,8 @@
     padding: 16px;
   }
   
-  .appTitle {
-    font-size: 20px;
-    justify-content: center;
+  .app-logo {
+    height: 28px;
   }
 }
 
