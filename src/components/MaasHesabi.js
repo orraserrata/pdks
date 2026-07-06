@@ -1,5 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
+
+const MAAS_TIPI_TABS = [
+  { value: 'saatli', label: 'Saatlik Maaş Alanlar' },
+  { value: 'gunluk', label: 'Gün Bazlı Maaş Alanlar' },
+];
+
+function getPersonelMaasTipi(personel) {
+  return personel?.maas_tipi || 'saatli';
+}
 
 const MaasHesabi = () => {
   const [maasAyarlari, setMaasAyarlari] = useState([]);
@@ -7,6 +16,7 @@ const MaasHesabi = () => {
   const [availablePersonel, setAvailablePersonel] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState('raporlar');
+  const [settingsMaasTipi, setSettingsMaasTipi] = useState('saatli');
   
   // Maaş ayarları için state'ler
   const [showAddForm, setShowAddForm] = useState(false);
@@ -38,6 +48,21 @@ const MaasHesabi = () => {
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
+  const filteredMaasAyarlari = useMemo(() => {
+    return maasAyarlari.filter(
+      (ayar) => getPersonelMaasTipi(ayar.personel) === settingsMaasTipi
+    );
+  }, [maasAyarlari, settingsMaasTipi]);
+
+  const filteredAvailablePersonel = useMemo(() => {
+    return availablePersonel.filter(
+      (p) => (p.maas_tipi || 'saatli') === settingsMaasTipi
+        && !maasAyarlari.some((ma) => ma.kullanici_id === p.kullanici_id)
+    );
+  }, [availablePersonel, maasAyarlari, settingsMaasTipi]);
+
+  const isGunluk = settingsMaasTipi === 'gunluk';
+
   useEffect(() => {
     fetchMaasAyarlari();
     fetchAvailablePersonel();
@@ -57,7 +82,8 @@ const MaasHesabi = () => {
           personel:kullanici_id (
             kullanici_id,
             isim,
-            soyisim
+            soyisim,
+            maas_tipi
           )
         `)
         .eq('aktif', true)
@@ -82,7 +108,8 @@ const MaasHesabi = () => {
           personel:kullanici_id (
             kullanici_id,
             isim,
-            soyisim
+            soyisim,
+            maas_tipi
           )
         `)
         .eq('aktif', true);
@@ -151,7 +178,7 @@ const MaasHesabi = () => {
     try {
       const { data, error } = await supabase
         .from('personel')
-        .select('kullanici_id, isim, soyisim')
+        .select('kullanici_id, isim, soyisim, maas_tipi')
         .eq('aktif', true)
         .order('isim');
 
@@ -423,10 +450,52 @@ const MaasHesabi = () => {
       {/* Maaş Ayarları Sekmesi */}
       {activeSubTab === 'ayarlar' && (
         <div>
-          {/* Maaş Ayarları */}
+          <div style={{ marginBottom: '20px' }}>
+            <div className="responsive-flex" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {MAAS_TIPI_TABS.map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => {
+                    setSettingsMaasTipi(tab.value);
+                    setShowAddForm(false);
+                    setEditingSalary(null);
+                    setSelectedPersonel('');
+                    setAddSalary('');
+                    setAddTargetHours('');
+                  }}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: settingsMaasTipi === tab.value
+                      ? (tab.value === 'gunluk' ? '#4f46e5' : '#d97706')
+                      : '#f3f4f6',
+                    color: settingsMaasTipi === tab.value ? 'white' : '#374151',
+                    border: `1px solid ${settingsMaasTipi === tab.value
+                      ? (tab.value === 'gunluk' ? '#4f46e5' : '#d97706')
+                      : '#d1d5db'}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                  }}
+                >
+                  {tab.value === 'saatli' ? '⏱️' : '📅'} {tab.label}
+                  <span style={{
+                    marginLeft: '8px',
+                    fontSize: '12px',
+                    opacity: 0.9,
+                  }}>
+                    ({maasAyarlari.filter((a) => getPersonelMaasTipi(a.personel) === tab.value).length})
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div style={{ marginBottom: '30px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h3>Maaş Ayarları</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '12px' }}>
+              <h3 style={{ margin: 0 }}>
+                {isGunluk ? 'Gün Bazlı Maaş Ayarları' : 'Saatlik Maaş Ayarları'}
+              </h3>
               <button 
                 onClick={() => setShowAddForm(true)}
                 style={{ 
@@ -451,7 +520,9 @@ const MaasHesabi = () => {
                 borderRadius: '4px',
                 backgroundColor: '#f9f9f9'
               }}>
-                <h4>Yeni Maaş Ayarı Ekle</h4>
+                <h4>
+                  Yeni {isGunluk ? 'Gün Bazlı' : 'Saatlik'} Maaş Ayarı Ekle
+                </h4>
                 <div className="responsive-flex" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <div>
                     <label>Personel:</label>
@@ -461,16 +532,15 @@ const MaasHesabi = () => {
                       style={{ marginLeft: '5px', padding: '5px', minWidth: '200px' }}
                     >
                       <option value="">Personel Seçin</option>
-                      {availablePersonel
-                        .filter(p => !maasAyarlari.some(ma => ma.kullanici_id === p.kullanici_id))
-                        .map(personel => (
-                          <option key={personel.kullanici_id} value={personel.kullanici_id}>
-                            {personel.kullanici_id} - {personel.isim} {personel.soyisim}
-                          </option>
-                        ))
-                      }
-                      {availablePersonel.filter(p => !maasAyarlari.some(ma => ma.kullanici_id === p.kullanici_id)).length === 0 && (
-                        <option value="" disabled>Tüm personel için maaş ayarı mevcut</option>
+                      {filteredAvailablePersonel.map(personel => (
+                        <option key={personel.kullanici_id} value={personel.kullanici_id}>
+                          {personel.kullanici_id} - {personel.isim} {personel.soyisim}
+                        </option>
+                      ))}
+                      {filteredAvailablePersonel.length === 0 && (
+                        <option value="" disabled>
+                          Bu kategoride eklenecek personel yok
+                        </option>
                       )}
                     </select>
                   </div>
@@ -487,12 +557,12 @@ const MaasHesabi = () => {
                   </div>
                   
                   <div>
-                    <label>Hedef Saat:</label>
+                    <label>{isGunluk ? 'Hedef Gün:' : 'Hedef Saat:'}</label>
                     <input
                       type="number"
                       value={addTargetHours}
                       onChange={(e) => setAddTargetHours(e.target.value)}
-                      placeholder="240"
+                      placeholder={isGunluk ? '22' : '240'}
                       style={{ marginLeft: '5px', padding: '5px', width: '100px' }}
                     />
                   </div>
@@ -538,17 +608,27 @@ const MaasHesabi = () => {
             <div className="mobile-scroll-wrap" style={{ overflowX: 'auto' }}>
               <table className="mobile-scroll-table" style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ddd' }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#f5f5f5' }}>
+                  <tr style={{ backgroundColor: isGunluk ? '#eef2ff' : '#fffbeb' }}>
                     <th style={{ border: '1px solid #ddd', padding: '8px' }}>Kullanıcı ID</th>
                     <th style={{ border: '1px solid #ddd', padding: '8px' }}>Ad Soyad</th>
                     <th style={{ border: '1px solid #ddd', padding: '8px' }}>Aylık Maaş</th>
-                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Hedef Saat</th>
-                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Saatlik Ücret</th>
+                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>
+                      {isGunluk ? 'Hedef Gün' : 'Hedef Saat'}
+                    </th>
+                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>
+                      {isGunluk ? 'Günlük Ücret' : 'Saatlik Ücret'}
+                    </th>
                     <th style={{ border: '1px solid #ddd', padding: '8px' }}>İşlemler</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {maasAyarlari.map((ayar) => (
+                  {filteredMaasAyarlari.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ border: '1px solid #ddd', padding: '16px', textAlign: 'center', color: '#6b7280' }}>
+                        Bu kategoride aktif personel bulunmuyor.
+                      </td>
+                    </tr>
+                  ) : filteredMaasAyarlari.map((ayar) => (
                     <tr key={ayar.kullanici_id}>
                       <td style={{ border: '1px solid #ddd', padding: '8px' }}>{ayar.kullanici_id}</td>
                       <td style={{ border: '1px solid #ddd', padding: '8px' }}>
@@ -573,11 +653,11 @@ const MaasHesabi = () => {
                             type="number"
                             value={newTargetHours}
                             onChange={(e) => setNewTargetHours(e.target.value)}
-                            placeholder="Hedef saat"
+                            placeholder={isGunluk ? 'Hedef gün' : 'Hedef saat'}
                             style={{ width: '80px', padding: '4px' }}
                           />
                         ) : (
-                          `${ayar.hedef_saat} saat`
+                          `${ayar.hedef_saat} ${isGunluk ? 'gün' : 'saat'}`
                         )}
                       </td>
                       <td style={{ border: '1px solid #ddd', padding: '8px' }}>
