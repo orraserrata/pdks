@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useLayoutEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
 import './App.css';
 import CalisanListesi from "./components/CalisanListesi";
@@ -16,19 +16,6 @@ import LoadingSpinner from "./components/LoadingSpinner";
 import MaasHesabi from "./components/MaasHesabi";
 import Maasim from "./components/Maasim";
 import IzinTalepleri from "./components/IzinTalepleri";
-
-function getProfileInitial(userProfile, email) {
-  const isim = userProfile?.isim?.trim();
-  if (isim) return isim.charAt(0).toLocaleUpperCase("tr-TR");
-
-  const soyisim = userProfile?.soyisim?.trim();
-  if (soyisim) return soyisim.charAt(0).toLocaleUpperCase("tr-TR");
-
-  const mail = email?.trim();
-  if (mail) return mail.charAt(0).toLocaleUpperCase("tr-TR");
-
-  return "?";
-}
 
 function App() {
   const [personeller, setPersoneller] = useState([]);
@@ -49,7 +36,9 @@ function App() {
   const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [accountMenuPosition, setAccountMenuPosition] = useState(null);
   const accountMenuRef = useRef(null);
+  const profileBtnRef = useRef(null);
   const [isMobileViewport, setIsMobileViewport] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches
   );
@@ -83,6 +72,42 @@ function App() {
       document.removeEventListener("keydown", handleEscape);
     };
   }, [isAccountMenuOpen]);
+
+  const updateAccountMenuPosition = useCallback(() => {
+    if (!profileBtnRef.current) return;
+
+    const rect = profileBtnRef.current.getBoundingClientRect();
+    const menuWidth = Math.min(260, window.innerWidth - 24);
+    const gap = 8;
+    const margin = 12;
+
+    let left = rect.right - menuWidth;
+    if (left < margin) left = margin;
+    if (left + menuWidth > window.innerWidth - margin) {
+      left = window.innerWidth - menuWidth - margin;
+    }
+
+    setAccountMenuPosition({
+      top: rect.bottom + gap,
+      left,
+      width: menuWidth,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isAccountMenuOpen) {
+      setAccountMenuPosition(null);
+      return;
+    }
+
+    updateAccountMenuPosition();
+    window.addEventListener("resize", updateAccountMenuPosition);
+    window.addEventListener("scroll", updateAccountMenuPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateAccountMenuPosition);
+      window.removeEventListener("scroll", updateAccountMenuPosition, true);
+    };
+  }, [isAccountMenuOpen, updateAccountMenuPosition]);
 
   async function fetchPersoneller() {
     const { data, error } = await supabase
@@ -415,6 +440,7 @@ function App() {
               {session ? (
                 <>
                   <button
+                    ref={profileBtnRef}
                     type="button"
                     className="account-profile-btn"
                     onClick={() => setIsAccountMenuOpen((open) => !open)}
@@ -422,12 +448,20 @@ function App() {
                     aria-haspopup="true"
                     aria-label="Hesap menüsü"
                   >
-                    <span className="account-profile-initial" aria-hidden="true">
-                      {getProfileInitial(userProfile, session.user?.email)}
-                    </span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <circle cx="12" cy="8" r="4" />
+                      <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" />
+                    </svg>
                   </button>
-                  {isAccountMenuOpen && (
-                    <div className="account-menu">
+                  {isAccountMenuOpen && accountMenuPosition && (
+                    <div
+                      className="account-menu"
+                      style={{
+                        top: accountMenuPosition.top,
+                        left: accountMenuPosition.left,
+                        width: accountMenuPosition.width,
+                      }}
+                    >
                       <div className="account-menu-email">{session.user?.email}</div>
                       <button
                         type="button"
