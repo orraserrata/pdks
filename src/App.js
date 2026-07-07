@@ -39,6 +39,9 @@ function App() {
   const [accountMenuPosition, setAccountMenuPosition] = useState(null);
   const accountMenuRef = useRef(null);
   const profileBtnRef = useRef(null);
+  const mobileMenuRef = useRef(null);
+  const mobileMenuBtnRef = useRef(null);
+  const [mobileMenuPosition, setMobileMenuPosition] = useState(null);
   const [isMobileViewport, setIsMobileViewport] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches
   );
@@ -51,17 +54,35 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!isAccountMenuOpen) return;
+    if (!isMobileViewport) {
+      setIsMobileMenuOpen(false);
+    }
+  }, [isMobileViewport]);
+
+  useEffect(() => {
+    if (!isAccountMenuOpen && !isMobileMenuOpen) return;
 
     function handleClickOutside(event) {
-      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target)) {
+      if (
+        isAccountMenuOpen &&
+        accountMenuRef.current &&
+        !accountMenuRef.current.contains(event.target)
+      ) {
         setIsAccountMenuOpen(false);
+      }
+      if (
+        isMobileMenuOpen &&
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(event.target)
+      ) {
+        setIsMobileMenuOpen(false);
       }
     }
 
     function handleEscape(event) {
       if (event.key === "Escape") {
         setIsAccountMenuOpen(false);
+        setIsMobileMenuOpen(false);
       }
     }
 
@@ -71,7 +92,7 @@ function App() {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isAccountMenuOpen]);
+  }, [isAccountMenuOpen, isMobileMenuOpen]);
 
   const updateAccountMenuPosition = useCallback(() => {
     if (!profileBtnRef.current) return;
@@ -108,6 +129,42 @@ function App() {
       window.removeEventListener("scroll", updateAccountMenuPosition, true);
     };
   }, [isAccountMenuOpen, updateAccountMenuPosition]);
+
+  const updateMobileMenuPosition = useCallback(() => {
+    if (!mobileMenuBtnRef.current) return;
+
+    const rect = mobileMenuBtnRef.current.getBoundingClientRect();
+    const menuWidth = Math.min(Math.max(rect.width, 220), window.innerWidth - 24);
+    const gap = 8;
+    const margin = 12;
+
+    let left = rect.left;
+    if (left + menuWidth > window.innerWidth - margin) {
+      left = window.innerWidth - menuWidth - margin;
+    }
+    if (left < margin) left = margin;
+
+    setMobileMenuPosition({
+      top: rect.bottom + gap,
+      left,
+      width: menuWidth,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isMobileMenuOpen || !isMobileViewport) {
+      setMobileMenuPosition(null);
+      return;
+    }
+
+    updateMobileMenuPosition();
+    window.addEventListener("resize", updateMobileMenuPosition);
+    window.addEventListener("scroll", updateMobileMenuPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateMobileMenuPosition);
+      window.removeEventListener("scroll", updateMobileMenuPosition, true);
+    };
+  }, [isMobileMenuOpen, isMobileViewport, updateMobileMenuPosition]);
 
   async function fetchPersoneller() {
     const { data, error } = await supabase
@@ -382,7 +439,10 @@ function App() {
                       ref={profileBtnRef}
                       type="button"
                       className="account-profile-btn"
-                      onClick={() => setIsAccountMenuOpen((open) => !open)}
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setIsAccountMenuOpen((open) => !open);
+                      }}
                       aria-expanded={isAccountMenuOpen}
                       aria-haspopup="true"
                       aria-label="Hesap menüsü"
@@ -432,11 +492,32 @@ function App() {
               </div>
             </div>
           </div>
-          <div className="toolbar-center">
-            <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+          <div className="toolbar-center" ref={mobileMenuRef}>
+            <button
+              ref={mobileMenuBtnRef}
+              type="button"
+              className="mobile-menu-btn"
+              onClick={() => {
+                setIsAccountMenuOpen(false);
+                setIsMobileMenuOpen((open) => !open);
+              }}
+              aria-expanded={isMobileMenuOpen}
+              aria-haspopup="true"
+            >
               {isMobileMenuOpen ? "✖ Menüyü Kapat" : "☰ Menü"}
             </button>
-            <div className={`tabs ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+            <div
+              className={`tabs${isMobileViewport && isMobileMenuOpen ? " mobile-open" : ""}${isMobileViewport ? " tabs--dropdown" : ""}`}
+              style={
+                isMobileViewport && isMobileMenuOpen && mobileMenuPosition
+                  ? {
+                      top: mobileMenuPosition.top,
+                      left: mobileMenuPosition.left,
+                      width: mobileMenuPosition.width,
+                    }
+                  : undefined
+              }
+            >
               <button
                 className={`tab ${activeTab === 'calisanlar' ? 'tab-active' : ''}`}
                 onClick={() => { setActiveTab('calisanlar'); setIsMobileMenuOpen(false); }}
