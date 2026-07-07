@@ -43,27 +43,26 @@
   }
   
   .toolbar {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
     gap: 12px;
   }
-  
+
+  .toolbar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+  }
+
   .toolbar-center {
     width: 100%;
-    order: 3;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
   }
-  
-  .toolbar-right {
-    order: 2;
-    display: flex;
-    justify-content: center;
-  }
-  
+
   .tabs {
     display: none;
     flex-direction: column;
@@ -161,6 +160,14 @@
   overflow: visible;
 }
 
+.toolbar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+
 .toolbar-left {
   display: flex;
   align-items: center;
@@ -177,6 +184,24 @@
   display: flex;
   align-items: center;
   overflow: visible;
+}
+
+@media (min-width: 769px) {
+  .toolbar-header {
+    display: contents;
+  }
+
+  .toolbar-left {
+    order: 1;
+  }
+
+  .toolbar-center {
+    order: 2;
+  }
+
+  .toolbar-right {
+    order: 3;
+  }
 }
 
 .account {

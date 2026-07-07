@@ -370,8 +370,67 @@ function App() {
 
       <div className="App container">
         <div className="toolbar">
-          <div className="toolbar-left">
-            <img src="/logo.svg" alt="Lulus Personel" className="app-logo" />
+          <div className="toolbar-header">
+            <div className="toolbar-left">
+              <img src="/logo.svg" alt="Lulus Personel" className="app-logo" />
+            </div>
+            <div className="toolbar-right">
+              <div className={`account${session ? " account--logged-in" : ""}`} ref={accountMenuRef}>
+                {session ? (
+                  <>
+                    <button
+                      ref={profileBtnRef}
+                      type="button"
+                      className="account-profile-btn"
+                      onClick={() => setIsAccountMenuOpen((open) => !open)}
+                      aria-expanded={isAccountMenuOpen}
+                      aria-haspopup="true"
+                      aria-label="Hesap menüsü"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <circle cx="12" cy="8" r="4" />
+                        <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" />
+                      </svg>
+                    </button>
+                    {isAccountMenuOpen && accountMenuPosition && (
+                      <div
+                        className="account-menu"
+                        style={{
+                          top: accountMenuPosition.top,
+                          left: accountMenuPosition.left,
+                          width: accountMenuPosition.width,
+                        }}
+                      >
+                        <div className="account-menu-email">{session.user?.email}</div>
+                        <button
+                          type="button"
+                          className="account-logout-btn"
+                          onClick={async () => {
+                            try {
+                              await supabase.auth.signOut();
+                              setSession(null);
+                              setUserProfile(null);
+                              setIsAccountMenuOpen(false);
+                              localStorage.clear();
+                              sessionStorage.clear();
+                            } catch (error) {
+                              console.error("Çıkış hatası:", error);
+                            }
+                          }}
+                        >
+                          Çıkış
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <button className="tab" onClick={() => setShowHesapOlustur(true)}>Hesap Oluştur</button>
+                    <button className="tab" onClick={() => setShowGirisYap(true)}>Giriş Yap</button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
           <div className="toolbar-center">
             <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
@@ -433,63 +492,6 @@ function App() {
               >
                 Hata Bildirimleri
               </button>
-            </div>
-          </div>
-          <div className="toolbar-right">
-            <div className={`account${session ? " account--logged-in" : ""}`} ref={accountMenuRef}>
-              {session ? (
-                <>
-                  <button
-                    ref={profileBtnRef}
-                    type="button"
-                    className="account-profile-btn"
-                    onClick={() => setIsAccountMenuOpen((open) => !open)}
-                    aria-expanded={isAccountMenuOpen}
-                    aria-haspopup="true"
-                    aria-label="Hesap menüsü"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                      <circle cx="12" cy="8" r="4" />
-                      <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" />
-                    </svg>
-                  </button>
-                  {isAccountMenuOpen && accountMenuPosition && (
-                    <div
-                      className="account-menu"
-                      style={{
-                        top: accountMenuPosition.top,
-                        left: accountMenuPosition.left,
-                        width: accountMenuPosition.width,
-                      }}
-                    >
-                      <div className="account-menu-email">{session.user?.email}</div>
-                      <button
-                        type="button"
-                        className="account-logout-btn"
-                        onClick={async () => {
-                          try {
-                            await supabase.auth.signOut();
-                            setSession(null);
-                            setUserProfile(null);
-                            setIsAccountMenuOpen(false);
-                            localStorage.clear();
-                            sessionStorage.clear();
-                          } catch (error) {
-                            console.error("Çıkış hatası:", error);
-                          }
-                        }}
-                      >
-                        Çıkış
-                      </button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <button className="tab" onClick={() => setShowHesapOlustur(true)}>Hesap Oluştur</button>
-                  <button className="tab" onClick={() => setShowGirisYap(true)}>Giriş Yap</button>
-                </>
-              )}
             </div>
           </div>
         </div>
