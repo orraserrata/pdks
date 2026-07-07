@@ -41,27 +41,6 @@
   .layout {
     grid-template-columns: 1fr;
   }
-  
-  .toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-
-  .toolbar-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    gap: 12px;
-  }
-
-  .toolbar-center {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-  }
 
   .tabs {
     display: none;
@@ -201,6 +180,44 @@
 
   .toolbar-right {
     order: 3;
+  }
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    flex-wrap: nowrap !important;
+    gap: 12px;
+  }
+
+  .toolbar-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    flex: 0 0 auto;
+    gap: 12px;
+  }
+
+  .toolbar-left,
+  .toolbar-right {
+    order: unset;
+    flex: 0 0 auto;
+  }
+
+  .toolbar-center {
+    width: 100%;
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    order: unset;
+  }
+
+  .toolbar-center .tabs {
+    width: 100%;
   }
 }
 
