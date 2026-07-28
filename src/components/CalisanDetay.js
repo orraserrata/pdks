@@ -142,14 +142,16 @@ function CalisanDetay({ calisan, inDialog = false }) {
           isAbsent: false,
         }));
 
+    const recordCount = recs.length;
+
     return {
       dateStr,
       gunAdi: format(gun, "EEEE", { locale: trLocale }),
       gunKisa: format(gun, "d MMM yyyy", { locale: trLocale }),
       kayitlar,
-      isAbsent: recs.length === 0,
-      isSingleRecord: recs.length === 1,
-      hasEdited: kayitlar.some((k) => k._row?.admin_locked),
+      isAbsent: recordCount === 0,
+      recordCount,
+      hasEdited: recs.some((r) => r.admin_locked === true),
       gunToplam: kayitlar.reduce((s, k) => s + k.sure, 0),
     };
   });
@@ -363,7 +365,9 @@ function CalisanDetay({ calisan, inDialog = false }) {
         <div className="calisan-gun-list">
           {gunGruplari.map((grup) => {
             const isSingleUnedited =
-              !grup.isAbsent && grup.isSingleRecord && !grup.hasEdited;
+              !grup.isAbsent &&
+              grup.recordCount === 1 &&
+              !grup.hasEdited;
 
             const cardClass = grup.isAbsent
               ? "calisan-gun-card calisan-gun-card--absent"
