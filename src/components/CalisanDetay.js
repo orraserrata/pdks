@@ -148,6 +148,7 @@ function CalisanDetay({ calisan, inDialog = false }) {
       gunKisa: format(gun, "d MMM yyyy", { locale: trLocale }),
       kayitlar,
       isAbsent: recs.length === 0,
+      isSingleRecord: recs.length === 1,
       hasEdited: kayitlar.some((k) => k._row?.admin_locked),
       gunToplam: kayitlar.reduce((s, k) => s + k.sure, 0),
     };
@@ -361,11 +362,16 @@ function CalisanDetay({ calisan, inDialog = false }) {
       {inDialog ? (
         <div className="calisan-gun-list">
           {gunGruplari.map((grup) => {
+            const isSingleUnedited =
+              !grup.isAbsent && grup.isSingleRecord && !grup.hasEdited;
+
             const cardClass = grup.isAbsent
               ? "calisan-gun-card calisan-gun-card--absent"
               : grup.hasEdited
                 ? "calisan-gun-card calisan-gun-card--edited"
-                : "calisan-gun-card";
+                : isSingleUnedited
+                  ? "calisan-gun-card calisan-gun-card--single"
+                  : "calisan-gun-card";
 
             const badgeClass = grup.isAbsent
               ? "calisan-gun-card-badge calisan-gun-card-badge--absent"
