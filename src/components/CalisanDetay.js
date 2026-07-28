@@ -143,6 +143,10 @@ function CalisanDetay({ calisan, inDialog = false }) {
         }));
 
     const recordCount = recs.length;
+    const hasIncompleteRecord = recs.some((r) => !r.cikisDt);
+    // Tek kayıt + çıkış eksik + düzeltilmemiş → dikkat çek
+    const needsAttention =
+      recordCount === 1 && hasIncompleteRecord && !recs.some((r) => r.admin_locked === true);
 
     return {
       dateStr,
@@ -152,6 +156,7 @@ function CalisanDetay({ calisan, inDialog = false }) {
       isAbsent: recordCount === 0,
       recordCount,
       hasEdited: recs.some((r) => r.admin_locked === true),
+      needsAttention,
       gunToplam: kayitlar.reduce((s, k) => s + k.sure, 0),
     };
   });
@@ -364,16 +369,11 @@ function CalisanDetay({ calisan, inDialog = false }) {
       {inDialog ? (
         <div className="calisan-gun-list">
           {gunGruplari.map((grup) => {
-            const isSingleUnedited =
-              !grup.isAbsent &&
-              grup.recordCount === 1 &&
-              !grup.hasEdited;
-
             const cardClass = grup.isAbsent
               ? "calisan-gun-card calisan-gun-card--absent"
               : grup.hasEdited
                 ? "calisan-gun-card calisan-gun-card--edited"
-                : isSingleUnedited
+                : grup.needsAttention
                   ? "calisan-gun-card calisan-gun-card--single"
                   : "calisan-gun-card";
 
