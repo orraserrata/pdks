@@ -667,6 +667,8 @@ function App() {
                 onCalisanSelect={(calisan) => setSeciliCalisan(calisan)}
                 seciliCalisan={seciliCalisan}
                 session={session}
+                userProfile={userProfile}
+                profileLoading={profileLoading}
               />
             </div>
             {!isMobileViewport && seciliCalisan && (

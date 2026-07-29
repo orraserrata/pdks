@@ -33,11 +33,15 @@ function countIncompleteDays(rows, monthStartStr, monthEndStr, todayStr) {
   return count;
 }
 
-export default function CalisanListesi({ personeller, onCalisanSelect, seciliCalisan, session }) {
+export default function CalisanListesi({
+  personeller,
+  onCalisanSelect,
+  seciliCalisan,
+  session,
+  userProfile,
+  profileLoading = false,
+}) {
   const [filter, setFilter] = useState("active"); // "all", "active", "inactive"
-  const [userProfile, setUserProfile] = useState(null);
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [profileError, setProfileError] = useState("");
   const [incompleteCounts, setIncompleteCounts] = useState({});
   
   // Filtreleme ve sıralama
@@ -113,100 +117,6 @@ export default function CalisanListesi({ personeller, onCalisanSelect, seciliCal
     loadIncompleteCounts();
   }, [personeller]);
 
-  // Kullanıcı profilini yükle
-  useEffect(() => {
-    async function loadUserProfile() {
-      if (!session?.user) {
-        console.log("Session yok");
-        setUserProfile(null);
-        setProfileLoading(false);
-        return;
-      }
-      
-      console.log("Session var:", session.user.email);
-      setProfileLoading(true);
-      setProfileError("");
-      
-      try {
-        const metaKullaniciId = session?.user?.user_metadata?.kullanici_id;
-        const email = session?.user?.email || null;
-
-        console.log("Email:", email);
-        console.log("Meta kullanici_id:", metaKullaniciId);
-
-        // Önce email ile profil arama yap
-        let query = supabase.from("kullanici_profilleri").select("*");
-        if (email) {
-          query = query.eq("email", email);
-          console.log("Email ile arama yapılıyor:", email);
-        }
-
-        let { data, error } = await query.maybeSingle();
-        console.log("Sorgu sonucu:", { data, error });
-
-        if (error) {
-          console.error("Profil yükleme hatası:", error);
-          setProfileError(error.message || "Profil alınamadı");
-          setUserProfile(null);
-        } else if (data) {
-          console.log("Profil bulundu:", data);
-          setUserProfile(data);
-                 } else {
-           // Profil bulunamadı - admin olup olmadığını kontrol et
-           console.log("Profil bulunamadı, admin kontrolü yapılıyor");
-           
-           // Admin kontrolü için admin_users tablosundan kontrol et
-           // admin_users tablosunda email yok, user_id var
-           // Önce auth.users tablosundan user_id'yi bul
-           const { data: authUser } = await supabase.auth.getUser();
-           
-           if (authUser?.user?.id) {
-             const adminCheck = await supabase
-               .from("admin_users")
-               .select("user_id")
-               .eq("user_id", authUser.user.id)
-               .maybeSingle();
-             
-             console.log("Admin kontrolü sonucu:", adminCheck);
-             
-             if (adminCheck.data) {
-               // Admin kullanıcı - geçici admin profili oluştur
-               const tempAdminProfile = {
-                 id: -1,
-                 kullanici_id: null,
-                 email: email,
-                 isim: "Admin",
-                 soyisim: "Kullanıcı",
-                 is_admin: true,
-                 created_at: new Date().toISOString(),
-                 updated_at: new Date().toISOString()
-               };
-               console.log("Geçici admin profili oluşturuldu:", tempAdminProfile);
-               setUserProfile(tempAdminProfile);
-             } else {
-               // Normal kullanıcı ama profil yok - hata ver
-               console.log("Normal kullanıcı için profil bulunamadı");
-               setProfileError("Bu hesap için profil kaydı bulunamadı. Lütfen yöneticinizle iletişime geçin.");
-               setUserProfile(null);
-             }
-                       } else {
-              console.log("Auth user bulunamadı");
-              setProfileError("Kullanıcı kimliği bulunamadı. Lütfen yöneticinizle iletişime geçin.");
-              setUserProfile(null);
-            }
-         }
-      } catch (err) {
-        console.error("Profil yükleme exception:", err);
-        setProfileError(String(err.message || err));
-        setUserProfile(null);
-      } finally {
-        setProfileLoading(false);
-      }
-    }
-
-    loadUserProfile();
-  }, [session]);
-
   return (
     <div>
       <h2>Çalışan Listesi</h2>
@@ -227,7 +137,7 @@ export default function CalisanListesi({ personeller, onCalisanSelect, seciliCal
             Çalışan saatlerini görüntülemek için lütfen önce hesap oluşturun veya giriş yapın.
           </div>
         </div>
-      ) : profileLoading ? (
+      ) : profileLoading && !userProfile ? (
         <LoadingSpinner />
       ) : !userProfile ? (
         <div style={{
@@ -243,11 +153,6 @@ export default function CalisanListesi({ personeller, onCalisanSelect, seciliCal
           <div style={{ fontSize: "13px", color: "#991b1b" }}>
             Bu hesap için profil kaydı bulunamadı. Lütfen önce "Hesap Oluştur" bölümünden kayıt olun veya yöneticinizle iletişime geçin.
           </div>
-          {profileError && (
-            <div style={{ fontSize: "12px", color: "#991b1b", marginTop: "6px" }}>
-              Hata: {profileError}
-            </div>
-          )}
         </div>
       ) : (
         <>
