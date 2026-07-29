@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 import LoadingSpinner from "./LoadingSpinner";
 
-export default function CalisanListesi({ personeller, onCalisanSelect, session }) {
+export default function CalisanListesi({ personeller, onCalisanSelect, seciliCalisan, session }) {
   const [filter, setFilter] = useState("active"); // "all", "active", "inactive"
   const [userProfile, setUserProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -246,7 +246,7 @@ export default function CalisanListesi({ personeller, onCalisanSelect, session }
                   return (
                     <button
                       type="button"
-                      className="personRow"
+                      className={`personRow${seciliCalisan?.kullanici_id === kendiPersonel.kullanici_id ? " personRow--selected" : ""}`}
                       onClick={() => onCalisanSelect(kendiPersonel)}
                       style={{
                         position: "relative",
@@ -299,7 +299,7 @@ export default function CalisanListesi({ personeller, onCalisanSelect, session }
                     <button
                       key={p.kullanici_id}
                       type="button"
-                      className="personRow"
+                      className={`personRow${seciliCalisan?.kullanici_id === p.kullanici_id ? " personRow--selected" : ""}`}
                       onClick={() => onCalisanSelect(p)}
                       style={{
                         position: "relative",

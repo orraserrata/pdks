@@ -614,6 +614,7 @@ function App() {
               <CalisanListesi
                 personeller={personeller}
                 onCalisanSelect={(calisan) => setSeciliCalisan(calisan)}
+                seciliCalisan={seciliCalisan}
                 session={session}
               />
             </div>
