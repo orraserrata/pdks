@@ -144,9 +144,13 @@ function CalisanDetay({ calisan, inDialog = false }) {
 
     const recordCount = recs.length;
     const hasIncompleteRecord = recs.some((r) => !r.cikisDt);
-    // Tek kayıt + çıkış eksik + düzeltilmemiş → dikkat çek
+    const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
+    // Tek kayıt + çıkış eksik + düzeltilmemiş + bugün değil → dikkat çek
     const needsAttention =
-      recordCount === 1 && hasIncompleteRecord && !recs.some((r) => r.admin_locked === true);
+      !isToday &&
+      recordCount === 1 &&
+      hasIncompleteRecord &&
+      !recs.some((r) => r.admin_locked === true);
 
     return {
       dateStr,

@@ -37,6 +37,8 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [accountMenuPosition, setAccountMenuPosition] = useState(null);
+  const [hasPendingIzin, setHasPendingIzin] = useState(false);
+  const [hasPendingHata, setHasPendingHata] = useState(false);
   const accountMenuRef = useRef(null);
   const profileBtnRef = useRef(null);
   const mobileMenuRef = useRef(null);
@@ -256,6 +258,49 @@ function App() {
 
     loadUserProfile();
   }, [session?.user?.id, session?.user?.email]);
+
+  // Admin: bekleyen izin / hata bildirimi göstergesi
+  useEffect(() => {
+    if (!userProfile?.is_admin) {
+      setHasPendingIzin(false);
+      setHasPendingHata(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadPendingBadges() {
+      try {
+        const [izinRes, hataRes] = await Promise.all([
+          supabase
+            .from("izin_talepleri")
+            .select("id", { count: "exact", head: true })
+            .eq("durum", "beklemede"),
+          supabase
+            .from("hata_bildirimleri")
+            .select("id", { count: "exact", head: true })
+            .eq("durum", "beklemede"),
+        ]);
+
+        if (cancelled) return;
+        setHasPendingIzin((izinRes.count || 0) > 0);
+        setHasPendingHata((hataRes.count || 0) > 0);
+      } catch (err) {
+        console.error("Bekleyen talep göstergesi hatası:", err);
+      }
+    }
+
+    loadPendingBadges();
+    const intervalId = setInterval(loadPendingBadges, 60000);
+    const onFocus = () => loadPendingBadges();
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [userProfile?.is_admin, activeTab]);
 
   useEffect(() => {
     // İlk yüklemede session'ı al
@@ -565,6 +610,9 @@ function App() {
                 onClick={() => { setActiveTab('izinTalepleri'); setIsMobileMenuOpen(false); }}
               >
                 İzin Talepleri
+                {userProfile?.is_admin && hasPendingIzin && (
+                  <span className="tab-alert-dot" aria-label="Bekleyen izin talebi var" />
+                )}
               </button>
               {/* Hata Bildirimleri - hem normal kullanıcılar hem admin kullanıcılar görebilir */}
               <button 
@@ -572,6 +620,9 @@ function App() {
                 onClick={() => { setActiveTab('hataBildirimleri'); setIsMobileMenuOpen(false); }}
               >
                 Hata Bildirimleri
+                {userProfile?.is_admin && hasPendingHata && (
+                  <span className="tab-alert-dot" aria-label="Bekleyen hata bildirimi var" />
+                )}
               </button>
             </div>
           </div>

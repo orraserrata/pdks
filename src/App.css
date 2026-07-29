@@ -17,6 +17,7 @@
 }
 
 .tab {
+  position: relative;
   padding: 10px 14px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
@@ -28,6 +29,22 @@
   background: #111827;
   color: #ffffff;
   border-color: #111827;
+}
+
+.tab-alert-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px #ffffff;
+  pointer-events: none;
+}
+
+.tab-active .tab-alert-dot {
+  box-shadow: 0 0 0 2px #111827;
 }
 
 .layout {

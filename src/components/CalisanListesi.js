@@ -12,11 +12,12 @@ function getDisplayDate(row) {
   return format(new Date(girisDt.getTime() - DAY_START_HOUR * 60 * 60 * 1000), "yyyy-MM-dd");
 }
 
-function countIncompleteDays(rows, monthStartStr, monthEndStr) {
+function countIncompleteDays(rows, monthStartStr, monthEndStr, todayStr) {
   const byDay = {};
   for (const row of rows) {
     const displayDate = getDisplayDate(row);
     if (displayDate < monthStartStr || displayDate > monthEndStr) continue;
+    if (displayDate === todayStr) continue;
     if (!byDay[displayDate]) byDay[displayDate] = [];
     byDay[displayDate].push(row);
   }
@@ -72,6 +73,7 @@ export default function CalisanListesi({ personeller, onCalisanSelect, seciliCal
       const monthEnd = endOfMonth(now);
       const monthStartStr = format(monthStart, "yyyy-MM-dd");
       const monthEndStr = format(monthEnd, "yyyy-MM-dd");
+      const todayStr = format(now, "yyyy-MM-dd");
       const fetchStart = format(addDays(monthStart, -1), "yyyy-MM-dd");
       const fetchEnd = format(addDays(monthEnd, 2), "yyyy-MM-dd");
       const ids = personeller.map((p) => p.kullanici_id).filter((id) => id != null);
@@ -102,7 +104,7 @@ export default function CalisanListesi({ personeller, onCalisanSelect, seciliCal
 
       const counts = {};
       for (const id of ids) {
-        const n = countIncompleteDays(byUser[id] || [], monthStartStr, monthEndStr);
+        const n = countIncompleteDays(byUser[id] || [], monthStartStr, monthEndStr, todayStr);
         if (n > 0) counts[id] = n;
       }
       setIncompleteCounts(counts);
