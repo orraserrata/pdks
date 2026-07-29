@@ -2,12 +2,42 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 import LoadingSpinner from "./LoadingSpinner";
+import { format, startOfMonth, endOfMonth, addDays } from "date-fns";
+
+const DAY_START_HOUR = 5;
+
+function getDisplayDate(row) {
+  if (row.workday_date) return row.workday_date;
+  const girisDt = new Date(row.giris_tarihi);
+  return format(new Date(girisDt.getTime() - DAY_START_HOUR * 60 * 60 * 1000), "yyyy-MM-dd");
+}
+
+function countIncompleteDays(rows, monthStartStr, monthEndStr) {
+  const byDay = {};
+  for (const row of rows) {
+    const displayDate = getDisplayDate(row);
+    if (displayDate < monthStartStr || displayDate > monthEndStr) continue;
+    if (!byDay[displayDate]) byDay[displayDate] = [];
+    byDay[displayDate].push(row);
+  }
+
+  let count = 0;
+  for (const dayRows of Object.values(byDay)) {
+    const incomplete =
+      dayRows.length === 1 &&
+      !dayRows[0].cikis_tarihi &&
+      dayRows[0].admin_locked !== true;
+    if (incomplete) count += 1;
+  }
+  return count;
+}
 
 export default function CalisanListesi({ personeller, onCalisanSelect, seciliCalisan, session }) {
   const [filter, setFilter] = useState("active"); // "all", "active", "inactive"
   const [userProfile, setUserProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState("");
+  const [incompleteCounts, setIncompleteCounts] = useState({});
   
   // Filtreleme ve sıralama
   const filteredAndSorted = useMemo(() => {
@@ -28,6 +58,58 @@ export default function CalisanListesi({ personeller, onCalisanSelect, seciliCal
       return aName.localeCompare(bName, 'tr', { sensitivity: 'base' });
     });
   }, [personeller, filter]);
+
+  // Mevcut ay: eksik çıkışlı tek kayıt günlerini say
+  useEffect(() => {
+    async function loadIncompleteCounts() {
+      if (!personeller || personeller.length === 0) {
+        setIncompleteCounts({});
+        return;
+      }
+
+      const now = new Date();
+      const monthStart = startOfMonth(now);
+      const monthEnd = endOfMonth(now);
+      const monthStartStr = format(monthStart, "yyyy-MM-dd");
+      const monthEndStr = format(monthEnd, "yyyy-MM-dd");
+      const fetchStart = format(addDays(monthStart, -1), "yyyy-MM-dd");
+      const fetchEnd = format(addDays(monthEnd, 2), "yyyy-MM-dd");
+      const ids = personeller.map((p) => p.kullanici_id).filter((id) => id != null);
+
+      if (ids.length === 0) {
+        setIncompleteCounts({});
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("personel_giris_cikis_duzenli")
+        .select("kullanici_id, giris_tarihi, cikis_tarihi, workday_date, admin_locked")
+        .in("kullanici_id", ids)
+        .gte("giris_tarihi", fetchStart)
+        .lt("giris_tarihi", fetchEnd);
+
+      if (error) {
+        console.error("Eksik kayıt sayımı hatası:", error);
+        setIncompleteCounts({});
+        return;
+      }
+
+      const byUser = {};
+      for (const row of data || []) {
+        if (!byUser[row.kullanici_id]) byUser[row.kullanici_id] = [];
+        byUser[row.kullanici_id].push(row);
+      }
+
+      const counts = {};
+      for (const id of ids) {
+        const n = countIncompleteDays(byUser[id] || [], monthStartStr, monthEndStr);
+        if (n > 0) counts[id] = n;
+      }
+      setIncompleteCounts(counts);
+    }
+
+    loadIncompleteCounts();
+  }, [personeller]);
 
   // Kullanıcı profilini yükle
   useEffect(() => {
@@ -253,20 +335,21 @@ export default function CalisanListesi({ personeller, onCalisanSelect, seciliCal
                         opacity: kendiPersonel.aktif === false ? 0.7 : 1
                       }}
                     >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", gap: "8px" }}>
                         <span>{kendiPersonel.isim || `ID: ${kendiPersonel.kullanici_id}`} {kendiPersonel.soyisim || ""}</span>
-                        {kendiPersonel.aktif === false && (
-                          <span style={{
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                            fontSize: "10px",
-                            fontWeight: "500",
-                            backgroundColor: "#fee2e2",
-                            color: "#dc2626"
-                          }}>
-                            Pasif
-                          </span>
-                        )}
+                        <div className="personRow-badges">
+                          {(incompleteCounts[kendiPersonel.kullanici_id] || 0) > 0 && (
+                            <span
+                              className="person-alert-badge"
+                              title={`Bu ay ${incompleteCounts[kendiPersonel.kullanici_id]} günde eksik çıkış kaydı var`}
+                            >
+                              {incompleteCounts[kendiPersonel.kullanici_id]}
+                            </span>
+                          )}
+                          {kendiPersonel.aktif === false && (
+                            <span className="person-passive-badge">Pasif</span>
+                          )}
+                        </div>
                       </div>
                     </button>
                   );
@@ -306,20 +389,21 @@ export default function CalisanListesi({ personeller, onCalisanSelect, seciliCal
                         opacity: p.aktif === false ? 0.7 : 1
                       }}
                     >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", gap: "8px" }}>
                         <span>{p.isim || `ID: ${p.kullanici_id}`} {p.soyisim || ""}</span>
-                        {p.aktif === false && (
-                          <span style={{
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                            fontSize: "10px",
-                            fontWeight: "500",
-                            backgroundColor: "#fee2e2",
-                            color: "#dc2626"
-                          }}>
-                            Pasif
-                          </span>
-                        )}
+                        <div className="personRow-badges">
+                          {(incompleteCounts[p.kullanici_id] || 0) > 0 && (
+                            <span
+                              className="person-alert-badge"
+                              title={`Bu ay ${incompleteCounts[p.kullanici_id]} günde eksik çıkış kaydı var`}
+                            >
+                              {incompleteCounts[p.kullanici_id]}
+                            </span>
+                          )}
+                          {p.aktif === false && (
+                            <span className="person-passive-badge">Pasif</span>
+                          )}
+                        </div>
                       </div>
                     </button>
                   ))}
