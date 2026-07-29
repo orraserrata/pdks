@@ -1129,6 +1129,48 @@
   white-space: nowrap;
 }
 
+.rapor-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid #9ca3af;
+}
+
+.rapor-table th,
+.rapor-table td {
+  border: 1px solid #9ca3af;
+  padding: 12px 10px;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 14px;
+  color: #374151;
+}
+
+.rapor-table thead th {
+  background: #e5e7eb;
+  font-weight: 600;
+  color: #111827;
+}
+
+.rapor-table tbody tr:nth-child(odd) {
+  background: #ffffff;
+}
+
+.rapor-table tbody tr:nth-child(even) {
+  background: #f3f4f6;
+}
+
+@media (max-width: 768px) {
+  .rapor-table.mobile-table tbody tr:nth-child(odd),
+  .rapor-table.mobile-table tbody tr:nth-child(even) {
+    background: #ffffff;
+  }
+
+  .rapor-table.mobile-table td {
+    text-align: right;
+  }
+}
+
 .personel-form-checkbox {
   display: flex;
   align-items: center;

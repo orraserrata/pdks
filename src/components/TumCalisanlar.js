@@ -117,17 +117,20 @@ function TumCalisanlar() {
 
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
+    const tarihAraligi = `${format(new Date(baslangic), "dd.MM.yyyy")} - ${format(new Date(bitis), "dd.MM.yyyy")}`;
+    const raporBaslik = `Lulus Personel - Çalışan Raporu (${tarihAraligi})`;
     const printContent = `
       <html>
         <head>
-          <title>PDKS - Çalışan Raporu</title>
+          <title>${raporBaslik}</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 20px; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
+            th, td { border: 1px solid #9ca3af; padding: 8px; text-align: center; }
+            th { background-color: #e5e7eb; }
+            tbody tr:nth-child(even) { background-color: #f3f4f6; }
+            tbody tr:nth-child(odd) { background-color: #ffffff; }
             .header { text-align: center; margin-bottom: 20px; }
-            .date-range { margin-bottom: 20px; }
             @media print {
               .no-print { display: none; }
             }
@@ -135,10 +138,7 @@ function TumCalisanlar() {
         </head>
         <body>
           <div class="header">
-            <h1>PDKS - Çalışan Raporu</h1>
-            <div class="date-range">
-              <strong>Tarih Aralığı:</strong> ${format(new Date(baslangic), "dd.MM.yyyy")} - ${format(new Date(bitis), "dd.MM.yyyy")}
-            </div>
+            <h1>${raporBaslik}</h1>
           </div>
           <table>
                     <thead>
@@ -165,9 +165,6 @@ function TumCalisanlar() {
               }).join('')}
             </tbody>
           </table>
-          <div style="margin-top: 20px;">
-            <strong>Toplam Çalışan Sayısı:</strong> ${personeller.length}
-          </div>
         </body>
       </html>
     `;
@@ -270,7 +267,7 @@ function TumCalisanlar() {
         </button>
       </div>
 
-      <table border="1" className="mobile-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+      <table className="rapor-table mobile-table">
         <thead>
           <tr>
             <th>Sıra</th>
@@ -294,14 +291,6 @@ function TumCalisanlar() {
             );
           })}
         </tbody>
-        <tfoot>
-          <tr>
-            <td colSpan="4" style={{ textAlign: "right", fontWeight: "bold" }}>
-              Toplam Çalışan:
-            </td>
-            <td>{personeller.length}</td>
-          </tr>
-        </tfoot>
       </table>
     </div>
   );
