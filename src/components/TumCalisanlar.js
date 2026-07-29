@@ -127,12 +127,38 @@ function TumCalisanlar() {
             body { font-family: Arial, sans-serif; margin: 20px; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #9ca3af; padding: 8px; text-align: center; }
-            th { background-color: #e5e7eb; }
-            tbody tr:nth-child(even) { background-color: #f3f4f6; }
-            tbody tr:nth-child(odd) { background-color: #ffffff; }
+            th {
+              background-color: #e5e7eb;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            tbody tr:nth-child(odd) td {
+              background-color: #ffffff;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            tbody tr:nth-child(even) td {
+              background-color: #f3f4f6;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
             .header { text-align: center; margin-bottom: 20px; }
             @media print {
-              .no-print { display: none; }
+              th {
+                background-color: #e5e7eb !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              tbody tr:nth-child(odd) td {
+                background-color: #ffffff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              tbody tr:nth-child(even) td {
+                background-color: #f3f4f6 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
             }
           </style>
         </head>
