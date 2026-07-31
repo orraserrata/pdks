@@ -4,8 +4,28 @@ import { format, addDays } from "date-fns";
 import { calcIzinGunInRange } from "../utils/yillikIzin";
 import LoadingSpinner from "./LoadingSpinner";
 
-function formatYillikIzinGun(gun) {
-  return gun > 0 ? String(gun) : "-";
+const IZIN_TIPI_KISA = {
+  yillik_izin: "yıllık",
+  ucretsiz_izin: "ücretsiz",
+  raporlu: "rapor",
+};
+
+function formatIzinOzet(izinByTip) {
+  const parts = [];
+  // Sıra: yıllık, ücretsiz, rapor
+  ["yillik_izin", "ucretsiz_izin", "raporlu"].forEach((tip) => {
+    const gun = izinByTip[tip] || 0;
+    if (gun > 0) {
+      parts.push(`${gun}(${IZIN_TIPI_KISA[tip] || tip})`);
+    }
+  });
+  // Bilinmeyen tipler varsa ekle
+  Object.keys(izinByTip).forEach((tip) => {
+    if (IZIN_TIPI_KISA[tip]) return;
+    const gun = izinByTip[tip] || 0;
+    if (gun > 0) parts.push(`${gun}(${tip})`);
+  });
+  return parts.length > 0 ? parts.join(" ") : "-";
 }
 
 function TumCalisanlar() {
@@ -59,9 +79,8 @@ function TumCalisanlar() {
           .order("giris_tarihi", { ascending: true }),
         supabase
           .from("izin_talepleri")
-          .select("kullanici_id, baslangic_tarihi, bitis_tarihi")
+          .select("kullanici_id, izin_tipi, baslangic_tarihi, bitis_tarihi")
           .eq("durum", "onaylandi")
-          .eq("izin_tipi", "yillik_izin")
           .lte("baslangic_tarihi", bitis)
           .gt("bitis_tarihi", baslangic),
       ]);
@@ -92,20 +111,23 @@ function TumCalisanlar() {
         });
 
         const kisiIzinleri = izinKayitlari.filter((t) => t.kullanici_id === calisan.kullanici_id);
-        let yillikIzinGun = 0;
+        const izinByTip = {};
         kisiIzinleri.forEach((t) => {
-          yillikIzinGun += calcIzinGunInRange(
+          const gun = calcIzinGunInRange(
             t.baslangic_tarihi,
             t.bitis_tarihi,
             baslangic,
             bitis
           );
+          if (gun <= 0) return;
+          const tip = t.izin_tipi || "diger";
+          izinByTip[tip] = (izinByTip[tip] || 0) + gun;
         });
 
         detaylar[calisan.kullanici_id] = {
           toplamSure: toplamSure.toFixed(2),
           kayitSayisi: new Set(calisanKayitlari.map(k => k.workday_date || k.giris_tarihi?.split('T')[0])).size,
-          yillikIzinGun,
+          izinOzet: formatIzinOzet(izinByTip),
         };
       });
 
@@ -173,19 +195,19 @@ function TumCalisanlar() {
             <th>Ad Soyad</th>
             <th>Toplam Süre (Saat)</th>
             <th>İşe Gelinen Gün</th>
-            <th>Kullanılan Yıllık İzin</th>
+            <th>İzinler</th>
           </tr>
         </thead>
             <tbody>
               ${personeller.map((calisan, index) => {
-                const detay = calisanDetaylari[calisan.kullanici_id] || { toplamSure: "0.00", kayitSayisi: 0, yillikIzinGun: 0 };
+                const detay = calisanDetaylari[calisan.kullanici_id] || { toplamSure: "0.00", kayitSayisi: 0, izinOzet: "-" };
                 return `
                   <tr>
                     <td>${index + 1}</td>
                     <td>${(calisan.isim || "")} ${(calisan.soyisim || "")}</td>
                     <td>${detay.toplamSure}</td>
                     <td>${detay.kayitSayisi}</td>
-                    <td>${formatYillikIzinGun(detay.yillikIzinGun)}</td>
+                    <td>${detay.izinOzet || "-"}</td>
                   </tr>
                 `;
               }).join('')}
@@ -300,19 +322,19 @@ function TumCalisanlar() {
             <th>Ad Soyad</th>
             <th>Toplam Süre (Saat)</th>
             <th>İşe Gelinen Gün</th>
-            <th>Kullanılan Yıllık İzin</th>
+            <th>İzinler</th>
           </tr>
         </thead>
         <tbody>
           {personeller.map((calisan, index) => {
-            const detay = calisanDetaylari[calisan.kullanici_id] || { toplamSure: "0.00", kayitSayisi: 0, yillikIzinGun: 0 };
+            const detay = calisanDetaylari[calisan.kullanici_id] || { toplamSure: "0.00", kayitSayisi: 0, izinOzet: "-" };
             return (
               <tr key={calisan.kullanici_id}>
                 <td data-label="Sıra">{index + 1}</td>
                 <td data-label="Ad Soyad">{(calisan.isim || "")} {(calisan.soyisim || "")}</td>
                 <td data-label="Toplam Süre (Saat)">{detay.toplamSure}</td>
                 <td data-label="İşe Gelinen Gün">{detay.kayitSayisi}</td>
-                <td data-label="Kullanılan Yıllık İzin">{formatYillikIzinGun(detay.yillikIzinGun)}</td>
+                <td data-label="İzinler">{detay.izinOzet || "-"}</td>
               </tr>
             );
           })}
